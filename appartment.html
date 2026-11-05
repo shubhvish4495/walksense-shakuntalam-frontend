@@ -55,7 +55,6 @@ select:focus-visible,button:focus-visible{outline:3px solid var(--accent);outlin
 .result .empty{font-family:"Hind",sans-serif;font-size:1.05rem;font-weight:400;color:var(--muted)}
 .confirm{width:100%;margin-top:14px;font:inherit;font-weight:600;border:0;border-radius:10px;padding:14px;background:var(--accent);color:var(--accent-ink);cursor:pointer}
 .confirm:disabled{opacity:.4;cursor:not-allowed}
-.done{margin-top:14px;padding:12px 14px;border-radius:10px;border:1.5px solid var(--accent);font-weight:500}
 [hidden]{display:none!important}
 
 /* Wide screens: blur the low-res photo behind, show it sharp in a side panel */
@@ -100,7 +99,6 @@ select:focus-visible,button:focus-visible{outline:3px solid var(--accent);outlin
       </div>
     </div>
     <button class="confirm" id="confirm" type="button" disabled></button>
-    <div class="done" id="done" hidden></div>
   </section>
 </div>
 
@@ -108,14 +106,12 @@ select:focus-visible,button:focus-visible{outline:3px solid var(--accent);outlin
 const T = {
   en:{brand:"Shakuntalam",brandSub:"Apartment society",title:"Select your flat",sub:"Choose your floor, then your flat.",floor:"Floor",flat:"Flat",
       pickFloor:"Select floor",pickFlat:"Select flat",hintOff:"Choose a floor first.",hintOn:"Flats A to N are on this floor.",
-      resLbl:"Your flat",none:"Not selected yet",confirm:"Confirm flat",
-      ground:"Ground floor",ord:n=>{const s=["th","st","nd","rd"],v=n%100;return n+(s[(v-20)%10]||s[v]||s[0])+" floor"},
-      done:n=>"Flat "+n+" confirmed."},
+      resLbl:"Your flat",none:"Not selected yet",confirm:"Start navigation",
+      ground:"Ground floor",ord:n=>{const s=["th","st","nd","rd"],v=n%100;return n+(s[(v-20)%10]||s[v]||s[0])+" floor"}},
   hi:{brand:"शकुन्तलम",brandSub:"अपार्टमेंट सोसाइटी",title:"अपना फ़्लैट चुनें",sub:"पहले मंज़िल चुनें, फिर फ़्लैट।",floor:"मंज़िल",flat:"फ़्लैट",
       pickFloor:"मंज़िल चुनें",pickFlat:"फ़्लैट चुनें",hintOff:"पहले मंज़िल चुनें।",hintOn:"इस मंज़िल पर फ़्लैट A से N तक हैं।",
-      resLbl:"आपका फ़्लैट",none:"अभी चुना नहीं गया",confirm:"फ़्लैट पक्का करें",
-      ground:"भूतल (ग्राउंड फ़्लोर)",ord:n=>n+"वीं मंज़िल",
-      done:n=>"फ़्लैट "+n+" पक्का हो गया।"}
+      resLbl:"आपका फ़्लैट",none:"अभी चुना नहीं गया",confirm:"रास्ता दिखाएँ",
+      ground:"भूतल (ग्राउंड फ़्लोर)",ord:n=>n+"वीं मंज़िल"}
 };
 const FLOORS = 15, LETTERS = "ABCDEFGHIJKLMN".split("");
 let lang = "en";
@@ -137,25 +133,24 @@ function render(){
   floorEl.value=fv;
   flatEl.innerHTML = `<option value="">${t.pickFlat}</option>` + LETTERS.map(l=>`<option value="${l}">${l}</option>`).join("");
   flatEl.value=lv;
-  update(false);
+  update();
 }
 function code(){ return (floorEl.value===""||flatEl.value==="") ? "" : flatEl.value + floorEl.value; }
-function update(clearDone=true){
+function update(){
   const t=T[lang], hasFloor=floorEl.value!=="";
   flatEl.disabled=!hasFloor;
   $("hint").textContent = hasFloor ? t.hintOn : t.hintOff;
   const c=code();
   $("resNum").innerHTML = c ? c : `<span class="empty">${t.none}</span>`;
   $("confirm").disabled=!c;
-  if(clearDone) $("done").hidden=true;
 }
 floorEl.addEventListener("change",()=>{ flatEl.value=""; update(); });
 flatEl.addEventListener("change",()=>update());
-$("confirm").addEventListener("click",()=>{ const d=$("done"); d.textContent=T[lang].done(code()); d.hidden=false; });
+// Opens turn-by-turn directions from the society gate to this flat.
+$("confirm").addEventListener("click",()=>{ const c=code(); if(c) location.href="navigate.html?code="+encodeURIComponent(c); });
 document.querySelectorAll(".lang button").forEach(b=>b.addEventListener("click",()=>{
   lang=b.dataset.lang; try{localStorage.setItem("lang",lang);}catch(e){}
-  const was=!$("done").hidden; render();
-  if(was){ $("done").textContent=T[lang].done(code()); $("done").hidden=false; }
+  render();
 }));
 render();
 </script>

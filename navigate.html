@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Directions</title>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700&family=Hind:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --surface:#ffffff; --field:#f3f6f4; --ink:#17251f; --muted:#5a6b62; --line:#cdd8d1;
+  --accent:#1f6f54; --accent-ink:#ffffff; --soft:#e2efe8; --hi:#ffe9a8; --warn:#b3261e; --shadow:0 18px 50px rgba(8,20,14,.35);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --surface:#18231e; --field:#111a16; --ink:#e8f0eb; --muted:#9db1a6; --line:#33463c;
+    --accent:#5cc79d; --accent-ink:#0b1812; --soft:#21382d; --hi:#4a3f12; --warn:#ff8a80; --shadow:0 18px 50px rgba(0,0,0,.55); color-scheme: dark;
+  }
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;min-height:100vh;color:var(--ink);font-family:"Hind","Noto Sans Devanagari",system-ui,sans-serif;font-size:17px;line-height:1.5;
+  background:linear-gradient(180deg,#1d3a2c 0%,#14231c 60%)}
+.wrap{max-width:520px;margin:0 auto;padding:max(16px,env(safe-area-inset-top)) 16px calc(100px + env(safe-area-inset-bottom))}
+.top{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.brand{color:#fff;font-family:"Baloo 2","Hind",sans-serif;font-weight:700;font-size:1.25rem;line-height:1.2}
+.brand a{display:block;font-family:"Hind",sans-serif;font-weight:500;font-size:.85rem;color:#cfe8dc}
+.lang{display:flex;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.55);border-radius:999px;padding:3px;flex-shrink:0}
+.lang button{border:0;background:transparent;color:#fff;font:inherit;font-weight:600;padding:5px 14px;border-radius:999px;cursor:pointer}
+.lang button[aria-pressed="true"]{background:#fff;color:#14392b}
+.card{background:var(--surface);border-radius:18px;box-shadow:var(--shadow);margin-top:18px;overflow:hidden}
+.msg{margin-top:14px;padding:12px 14px;border-radius:12px;background:var(--surface);font-size:.95rem}
+.msg.err{border-left:4px solid var(--warn)}
+.navmain{display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:center;padding:18px;background:var(--accent);color:var(--accent-ink)}
+.nicon{font:400 60px/1 system-ui,sans-serif;width:64px;text-align:center}
+.ntxt{font-family:"Baloo 2","Hind",sans-serif;font-weight:700;font-size:1.6rem;line-height:1.15}
+.nsub{font-size:.95rem;opacity:.9;margin-top:6px;line-height:1.35}
+.nbar{height:6px;background:var(--line)} .nfill{height:100%;width:0;background:#f2b705;transition:width .15s}
+.then{padding:10px 18px;border-bottom:1px solid var(--line);font-weight:600;font-size:.95rem}
+.turning{padding:4px 18px 0;font-size:.8rem;color:var(--muted);min-height:1.4em}
+.list{max-height:260px;overflow:auto;position:relative}
+.it{display:flex;gap:12px;align-items:center;padding:10px 18px;border-bottom:1px solid var(--line);font-size:.95rem}
+.it.cur{background:var(--hi);font-weight:600} .it.done{opacity:.4}
+.it.lift{background:var(--soft)} .it.lift.cur{background:var(--hi)}
+.ii{font:22px/1 system-ui,sans-serif;width:28px;text-align:center;color:var(--accent)}
+.total{padding:10px 18px;font-size:.85rem;color:var(--muted)}
+.btns{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:14px 18px}
+button.b{font:inherit;font-weight:600;border:1.5px solid var(--accent);border-radius:10px;padding:12px 8px;background:transparent;color:var(--ink);cursor:pointer}
+button.b.main{background:var(--accent);color:var(--accent-ink)}
+button.b:disabled{opacity:.4;cursor:not-allowed}
+button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.prefs{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.prefs button{font:inherit;font-size:.9rem;border:1px solid rgba(255,255,255,.55);border-radius:10px;padding:9px;background:rgba(255,255,255,.12);color:#fff;cursor:pointer}
+details{margin-top:14px;color:#cfe8dc;font-size:.8rem}
+details summary{cursor:pointer}
+.log{max-height:160px;overflow:auto;font-family:ui-monospace,Menlo,monospace}
+.log p{margin:0;padding:4px 0;border-bottom:1px dotted rgba(255,255,255,.2)}
+.dock{position:fixed;left:0;right:0;bottom:0;background:var(--surface);box-shadow:0 -6px 24px rgba(0,0,0,.25);padding:12px 16px calc(12px + env(safe-area-inset-bottom))}
+.dock div{max-width:520px;margin:0 auto}
+.dock button{width:100%;font:inherit;font-weight:700;font-size:1.1rem;border:0;border-radius:12px;padding:16px;background:var(--accent);color:var(--accent-ink);cursor:pointer}
+.dock button.stop{background:transparent;color:var(--warn);border:1.5px solid var(--warn)}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div class="brand"><span id="title"></span><a href="appartment.html" id="change"></a></div>
+    <div class="lang" role="group" aria-label="Language / भाषा">
+      <button type="button" data-lang="en" aria-pressed="true">EN</button>
+      <button type="button" data-lang="hi" aria-pressed="false">हिं</button>
+    </div>
+  </div>
+
+  <div class="msg" id="msg" hidden></div>
+
+  <section class="card" id="nav" hidden>
+    <div class="navmain" aria-live="polite"><div class="nicon" id="nIcon">↑</div><div><div class="ntxt" id="nTxt"></div><div class="nsub" id="nSub"></div></div></div>
+    <div class="nbar"><div class="nfill" id="nFill"></div></div>
+    <div class="turning" id="turning"></div>
+    <div class="then" id="nThen" hidden></div>
+    <div class="btns" id="nBtns" hidden><button class="b" id="prevBtn"></button><button class="b main" id="nextBtn"></button></div>
+    <div class="list" id="nList"></div>
+    <div class="total" id="total"></div>
+  </section>
+
+  <div class="prefs" id="prefs" hidden><button id="cueBtn" type="button"></button><button id="voiceBtn" type="button"></button></div>
+  <details><summary id="detailsLbl"></summary><div class="log" id="log"></div></details>
+</div>
+<div class="dock" id="dock" hidden><div><button id="mainBtn" type="button"></button></div></div>
+
+<script src="js/api.js"></script>
+<script src="js/sensors.js"></script>
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const API = window.WalkAPI;
+  const CKEY = 'walksenseAgentCache';
+  const ICON = {s:'↑', L:'↰', R:'↱', lift:'⇅', end:'⌂'};
+  const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
+
+  // Same thresholds and storage keys as lab.html, so tuning done there applies here.
+  const T = {...WalkSensors.DEF};
+  try { const s = JSON.parse(localStorage.getItem('walksenseTune') || '{}') || {}; for (const k in T) if (s[k] != null && Number.isFinite(+s[k])) T[k] = +s[k]; } catch (_) {}
+  let lang = 'en', cues = true, voice = false;
+  try {
+    const s = localStorage.getItem('lang'); if (s === 'hi' || s === 'en') lang = s;
+    cues = localStorage.getItem('walksenseCues') !== '0'; voice = localStorage.getItem('walksenseVoice') === '1';
+  } catch (_) {}
+
+  const S = {
+    en:{title:c => c ? `Flat ${c}` : 'Directions', change:'← Change flat', details:'Details',
+      loading:'Loading the route…', errNet:'Could not load the route. Check your internet and try again.', retry:'Try again',
+      errCode:'That flat code is not valid. Go back and pick your flat.',
+      errGate:'The route from the gate has not been recorded yet. Please call the resident.',
+      errMissing:c => `The route to flat ${c} has not been recorded yet. Please call the resident.`,
+      errFloor:'This building does not have that floor.',
+      cached:'Offline: using the copy saved on this phone.',
+      readyT:'Start at the gate', startHow:'Stand just inside the society gate, facing in. Tap Start, then walk at a normal pace with the phone in your hand.',
+      start:'Start', stop:'Stop', stopQ:'Stop navigation?', back:'◀ Back', done:'Done ▶', cont:'Continue ▶', here:'I’m here ✓',
+      vib:b => `Vibration: ${b ? 'on' : 'off'}`, voice:b => `Voice: ${b ? 'on' : 'off'}`, voiceOn:'Voice guidance on',
+      L:'left', R:'right', walk:'Walk straight',
+      range:(lo, h, dest, m) => `≈ ${lo}–${h} steps ${dest} · ~${m} m`, toTurn:'to the turn', toLift:'to the lift', toDoor:'to the flat door',
+      soonTurn:d => `Turn ${d} soon`, soonSub:h => `Within the next ${h} steps. Turn when you see it, not when the count hits zero.`,
+      liftSoon:'Lift ahead', doorSoon:c => `Flat ${c} ahead`, aheadSub:h => `Within the next ${h} steps.`,
+      turnNow:d => `Turn ${d} now`, turnSub:'Turn when you reach it, or tap Done.',
+      over:n => `You should be at the turn, ${n} steps past the estimate. Trust what you see.`,
+      liftTo:f => `Take the lift to the ${f}`, liftSub:'Step out, stand with your back to the lift door, then tap Continue.',
+      liftG:'Turn around at the lift', liftGSub:'Stand with your back to the lift door, then tap Continue.',
+      endT:c => `Flat ${c} should be here`, endSub:'Look for the flat number, then tap I’m here.',
+      endOver:n => `${n} steps past the estimate. Keep looking for the door.`,
+      arrived:'You have arrived', arrivedSub:c => `Flat ${c}.`, then:x => `Then: ${x}`,
+      sayWalk:(n, m) => `Walk straight · about ${n} steps (~${m} m)`, sayTurn:d => `Turn ${d}`,
+      sayLift:f => `Take the lift to the ${f}`, sayLiftG:'At the lift, turn around', sayEnd:c => `Flat ${c}`,
+      total:(n, k) => `${n} steps · ${k} turns in total`,
+      ground:'ground floor', ord:n => { const s = ['th','st','nd','rd'], v = n%100; return n+(s[(v-20)%10]||s[v]||s[0])+' floor'; }},
+    hi:{title:c => c ? `फ़्लैट ${c}` : 'रास्ता', change:'← फ़्लैट बदलें', details:'विवरण',
+      loading:'रास्ता लोड हो रहा है…', errNet:'रास्ता लोड नहीं हो सका। इंटरनेट जाँचें और फिर कोशिश करें।', retry:'फिर कोशिश करें',
+      errCode:'यह फ़्लैट कोड सही नहीं है। वापस जाकर अपना फ़्लैट चुनें।',
+      errGate:'गेट से रास्ता अभी रिकॉर्ड नहीं हुआ है। कृपया निवासी को फ़ोन करें।',
+      errMissing:c => `फ़्लैट ${c} का रास्ता अभी रिकॉर्ड नहीं हुआ है। कृपया निवासी को फ़ोन करें।`,
+      errFloor:'इस इमारत में यह मंज़िल नहीं है।',
+      cached:'ऑफ़लाइन: इस फ़ोन में सेव की गई कॉपी इस्तेमाल हो रही है।',
+      readyT:'गेट से शुरू करें', startHow:'सोसाइटी गेट के ठीक अंदर, अंदर की ओर मुँह करके खड़े हों। स्टार्ट दबाएँ और फ़ोन हाथ में लेकर सामान्य चाल से चलें।',
+      start:'स्टार्ट', stop:'रोकें', stopQ:'नेविगेशन रोकें?', back:'◀ पीछे', done:'हो गया ▶', cont:'आगे ▶', here:'पहुँच गया ✓',
+      vib:b => `कंपन: ${b ? 'चालू' : 'बंद'}`, voice:b => `आवाज़: ${b ? 'चालू' : 'बंद'}`, voiceOn:'आवाज़ से निर्देश चालू',
+      L:'बाएँ', R:'दाएँ', walk:'सीधे चलें',
+      range:(lo, h, dest, m) => `${dest} ≈ ${lo}–${h} कदम · ~${m} मी`, toTurn:'मोड़ तक', toLift:'लिफ़्ट तक', toDoor:'फ़्लैट के दरवाज़े तक',
+      soonTurn:d => `जल्द ही ${d} मुड़ें`, soonSub:h => `अगले ${h} कदमों के अंदर। मोड़ दिखे तब मुड़ें, गिनती शून्य होने का इंतज़ार न करें।`,
+      liftSoon:'आगे लिफ़्ट है', doorSoon:c => `आगे फ़्लैट ${c} है`, aheadSub:h => `अगले ${h} कदमों के अंदर।`,
+      turnNow:d => `अब ${d} मुड़ें`, turnSub:'मोड़ पर पहुँचकर मुड़ें, या "हो गया" दबाएँ।',
+      over:n => `आपको मोड़ पर होना चाहिए, अनुमान से ${n} कदम आगे। जो दिख रहा है उस पर भरोसा करें।`,
+      liftTo:f => `लिफ़्ट से ${f} पर जाएँ`, liftSub:'बाहर निकलकर लिफ़्ट के दरवाज़े की ओर पीठ करके खड़े हों, फिर "आगे" दबाएँ।',
+      liftG:'लिफ़्ट पर पीछे मुड़ें', liftGSub:'लिफ़्ट के दरवाज़े की ओर पीठ करके खड़े हों, फिर "आगे" दबाएँ।',
+      endT:c => `फ़्लैट ${c} यहीं होना चाहिए`, endSub:'फ़्लैट नंबर देखें, फिर "पहुँच गया" दबाएँ।',
+      endOver:n => `अनुमान से ${n} कदम आगे। दरवाज़ा ढूँढते रहें।`,
+      arrived:'आप पहुँच गए', arrivedSub:c => `फ़्लैट ${c}।`, then:x => `फिर: ${x}`,
+      sayWalk:(n, m) => `सीधे चलें · लगभग ${n} कदम (~${m} मी)`, sayTurn:d => `${d} मुड़ें`,
+      sayLift:f => `लिफ़्ट से ${f} पर जाएँ`, sayLiftG:'लिफ़्ट पर पीछे मुड़ें', sayEnd:c => `फ़्लैट ${c}`,
+      total:(n, k) => `कुल ${n} कदम · ${k} मोड़`,
+      ground:'भूतल (ग्राउंड फ़्लोर)', ord:n => n+'वीं मंज़िल'}
+  };
+  const t = () => S[lang];
+
+  // Flat code is letter + floor, e.g. B5. It comes as ?code=B5, or as /go/B5 via the Netlify rule.
+  function parseCode() {
+    let c = '';
+    try { c = new URLSearchParams(location.search).get('code') || ''; } catch (_) {}
+    if (!c) { const p = location.pathname.match(/\/go\/([^/]+)\/?$/); if (p) c = decodeURIComponent(p[1]); }
+    const m = c.trim().match(/^([A-Na-n])(\d{1,3})$/);
+    return m ? {letter:m[1].toUpperCase(), floor:+m[2], code:m[1].toUpperCase() + (+m[2])} : null;
+  }
+  const want = parseCode();
+
+  // state: loading | error | ready | nav | arrived
+  let state = 'loading', err = null, fromCache = false, doc = null, stride = 0.7, plan = [];
+  // Plan items: {t:'s', n} walk, {t:'t', d} turn, {t:'lift', floor}, {t:'end'}.
+  let active = false, ri = 0, rem = 0, lastHtml = '', cueKey = '';
+  // Pace calibration (F-1) and overshoot tracking (F-2), as in lab.html's retrace.
+  let legSteps = 0, legRatio = 1, calibN = 0, overshoot = 0;
+
+  const floorLabel = f => f === 0 ? t().ground : t().ord(f);
+  const meters = n => Math.round(n*stride);
+  const legTarget = x => x && x.t === 's' ? Math.max(1, Math.round(x.n*legRatio)) : 0;
+  const bandFor = n => Math.max(2, Math.round(Math.max(0.04, 0.12/(1+calibN))*n + 1.5*Math.sqrt(n)));
+  function say(x, scaled) {
+    const s = t();
+    if (x.t === 's') { const n = scaled ? legTarget(x) : x.n; return s.sayWalk(n, meters(n)); }
+    if (x.t === 't') return s.sayTurn(s[x.d]);
+    if (x.t === 'lift') return x.floor === 0 ? s.sayLiftG : s.sayLift(floorLabel(x.floor));
+    return s.sayEnd(want.code);
+  }
+  function log(text) {
+    const time = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+    const p = document.createElement('p'); p.textContent = `${time} · ${text}`;
+    $('log').prepend(p);
+    while ($('log').children.length > 40) $('log').lastElementChild.remove();
+  }
+
+  // ---- cues ----
+  function speak(text) {
+    if (!voice || !text || !window.speechSynthesis) return;
+    try { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(text); u.lang = lang === 'hi' ? 'hi-IN' : 'en-IN'; speechSynthesis.speak(u); } catch (_) {}
+  }
+  const CUE_PAT = {soon:[70,80,70], turn:[150,90,150], arrived:[180,90,180,90,180]};
+  // Fires once per state transition, never on a repeat render.
+  function cue(key, kind, phrase) {
+    if (key === cueKey) return;
+    cueKey = key;
+    if (!key || !active) return;
+    if (cues && navigator.vibrate) { try { navigator.vibrate(CUE_PAT[kind] || 100); } catch (_) {} }
+    speak(phrase);
+  }
+
+  // ---- loading ----
+  const okRoute = r => API.fromWire(r).map(x => x.t === 's' ? {t:'s', n:Math.round(+x.n)} : x)
+    .filter(x => x.t === 's' ? x.n > 0 : (x.d === 'L' || x.d === 'R'));
+  function build() {
+    if (+doc.stride >= 0.3 && +doc.stride <= 1.4) stride = +doc.stride;
+    const gate = okRoute(doc.gate), flat = okRoute((doc.flats || {})[want.letter]);
+    err = !gate.length ? 'errGate' : !flat.length ? 'errMissing'
+      : doc.floors && want.floor > doc.floors.max ? 'errFloor' : null;
+    if (err) { state = 'error'; return; }
+    plan = [...gate, {t:'lift', floor:want.floor}, ...flat, {t:'end'}];
+    state = 'ready'; ri = 0; lastHtml = '';
+  }
+  async function load() {
+    if (!want) { state = 'error'; err = 'errCode'; render(); return; }
+    state = 'loading'; err = null; render();
+    try {
+      doc = await API.getFlats(); fromCache = false;
+      try { localStorage.setItem(CKEY, JSON.stringify(doc)); } catch (_) {}
+    } catch (e) {
+      log(`Load failed: ${e.message}`);
+      try { doc = JSON.parse(localStorage.getItem(CKEY) || 'null'); } catch (_) { doc = null; }
+      fromCache = !!doc;
+      if (!doc) { state = 'error'; err = 'errNet'; render(); return; }
+    }
+    build(); render();
+  }
+
+  // ---- navigation ----
+  function setIdx(i) {
+    ri = clamp(i, 0, plan.length-1); const x = plan[ri];
+    rem = legTarget(x);
+    // A leg starts at a walk (or after the lift). While standing on a turn, legSteps keeps
+    // running so overshoot past the estimate is part of the calibration sample (F-1).
+    if (x.t !== 't') legSteps = 0;
+    overshoot = 0;
+    render();
+  }
+  function calibrate(j) {
+    const expected = plan[j-1] && plan[j-1].t === 's' ? plan[j-1].n : 0;
+    if (expected < 8 || legSteps < 1) return;
+    const r = clamp(legSteps/expected, 0.6, 1.6);
+    legRatio = legRatio*0.6 + r*0.4; calibN++;
+    log(`Calibrated: walked ${legSteps} steps where ${expected} were recorded · pace factor ${legRatio.toFixed(2)}`);
+  }
+  function onStep() {
+    if (!active) return;
+    const x = plan[ri];
+    if (x.t === 'lift') return; // walking in and out of the lift is not part of any leg
+    legSteps++;
+    if (x.t !== 's') { overshoot++; render(); return; }
+    rem--;
+    if (rem <= 0) setIdx(ri+1); else render();
+  }
+  function onTurn(d, manual, deg) {
+    if (!active) return;
+    log(`${manual ? 'Manual' : 'Detected'} ${d === 'L' ? 'left' : 'right'} turn${deg ? ` (~${deg}°)` : ''}`);
+    const x = plan[ri]; let j = -1;
+    if (x.t === 't') j = ri;
+    else if (x.t === 's' && plan[ri+1] && plan[ri+1].t === 't') {
+      // A deliberate turn is stronger evidence than a step count from someone else's walk,
+      // so it advances, except early in a long stretch where it is likely a sidestep (B-2).
+      const target = legTarget(x), walked = target - rem;
+      if (target >= 12 && walked < target*0.15) { log(`Turn ignored: only ${walked} of about ${target} steps into this stretch.`); return; }
+      if (rem > Math.max(T.earlyMin, target*T.earlyPct/100)) log(`Turn came ${rem} steps earlier than expected. Recalibrating.`);
+      j = ri+1;
+    }
+    if (j < 0) { log('Turn not expected here, ignored.'); return; }
+    if (plan[j].d !== d) { log(`Expected a ${plan[j].d === 'L' ? 'left' : 'right'} turn. Tap Done to skip it.`); return; }
+    if (!manual) calibrate(j);
+    setIdx(j+1);
+  }
+  const sensors = WalkSensors.create({
+    // Two candidates are enough to believe a walker following directions (as in lab retrace).
+    warmup: 2,
+    onStep,
+    onTurn: (d, deg) => onTurn(d, false, deg),
+    onTurning: deg => { $('turning').textContent = deg == null ? '' : `↻ ${deg}°`; },
+    onIgnored: log,
+  });
+  async function start() {
+    try { await sensors.start(); }
+    catch (e) { showMsg(e.message, true); return; }
+    active = true; state = 'nav'; legRatio = 1; calibN = 0; cueKey = ''; lastHtml = '';
+    log(`Navigation to flat ${want.code} started.`);
+    setIdx(0);
+    speak($('nTxt').textContent);
+  }
+  function stop(next) {
+    sensors.stop(); active = false; cueKey = '';
+    try { if (window.speechSynthesis && next !== 'arrived') speechSynthesis.cancel(); } catch (_) {}
+    state = next; lastHtml = '';
+    if (next === 'ready') ri = 0;
+    render();
+  }
+  function arrive() {
+    if (cues && navigator.vibrate) { try { navigator.vibrate(CUE_PAT.arrived); } catch (_) {} }
+    log('Arrived.');
+    stop('arrived');
+    speak(t().arrived);
+  }
+
+  // ---- view ----
+  function showMsg(text, isErr) { const m = $('msg'); m.hidden = !text; m.textContent = text || ''; m.className = 'msg' + (isErr ? ' err' : ''); }
+  function renderNav() {
+    const s = t(), x = plan[ri], nx = plan[ri+1];
+    let icon = '↑', txt = '', sub = '', frac = 0, then = '';
+    if (state === 'ready') { txt = s.readyT; sub = s.startHow; }
+    else if (state === 'arrived') { icon = '✓'; txt = s.arrived; sub = s.arrivedSub(want.code); frac = 1; }
+    else if (x.t === 's') {
+      const target = legTarget(x), tol = Math.max(T.warnMin, Math.round(target*T.warnPct/100));
+      const band = bandFor(target), lo = Math.max(0, rem-band), h = rem+band;
+      const dest = nx.t === 't' ? s.toTurn : nx.t === 'lift' ? s.toLift : s.toDoor;
+      txt = s.walk; sub = s.range(lo, h, dest, meters(rem)); frac = (target-rem)/target;
+      if (rem <= tol) {
+        icon = ICON[nx.t === 't' ? nx.d : nx.t];
+        txt = nx.t === 't' ? s.soonTurn(s[nx.d]) : nx.t === 'lift' ? s.liftSoon : s.doorSoon(want.code);
+        sub = nx.t === 't' ? s.soonSub(h) : s.aheadSub(h);
+        cue(`soon${ri}`, 'soon', txt);
+      } else cue('', 'soon');
+    } else if (x.t === 't') {
+      icon = ICON[x.d]; txt = s.turnNow(s[x.d]); sub = overshoot > 0 ? s.over(overshoot) : s.turnSub;
+      cue(`turn${ri}`, 'turn', txt);
+    } else if (x.t === 'lift') {
+      icon = ICON.lift;
+      txt = x.floor === 0 ? s.liftG : s.liftTo(floorLabel(x.floor)); sub = x.floor === 0 ? s.liftGSub : s.liftSub;
+      cue(`lift${ri}`, 'turn', txt);
+    } else {
+      icon = ICON.end; txt = s.endT(want.code); sub = overshoot > 0 ? s.endOver(overshoot) : s.endSub;
+      cue(`end${ri}`, 'arrived', txt);
+    }
+    if (state === 'nav' && nx) then = s.then(say(nx, true));
+    $('nIcon').textContent = icon; $('nTxt').textContent = txt; $('nSub').textContent = sub;
+    $('nFill').style.width = `${Math.round(clamp(frac, 0, 1)*100)}%`;
+    $('nThen').hidden = !then; $('nThen').textContent = then;
+    $('nBtns').hidden = state !== 'nav';
+    $('prevBtn').textContent = s.back; $('prevBtn').disabled = ri === 0;
+    $('nextBtn').textContent = x && x.t === 'end' ? s.here : x && x.t === 'lift' ? s.cont : s.done;
+    if (state !== 'nav') $('turning').textContent = '';
+    const html = plan.map((y, i) => {
+      const cls = (y.t === 'lift' ? ' lift' : '') + (state === 'nav' && i === ri ? ' cur' : '') + ((state === 'nav' && i < ri) || state === 'arrived' ? ' done' : '');
+      return `<div class="it${cls}"><span class="ii">${ICON[y.t === 't' ? y.d : y.t]}</span><span>${say(y)}</span></div>`;
+    }).join('');
+    if (html !== lastHtml) {
+      lastHtml = html; const l = $('nList'); l.innerHTML = html;
+      const c = l.querySelector('.cur'); l.scrollTop = c ? Math.max(0, c.offsetTop - 8) : 0;
+    }
+    const walks = plan.filter(y => y.t === 's');
+    $('total').textContent = s.total(walks.reduce((n, y) => n + y.n, 0), plan.filter(y => y.t === 't').length);
+  }
+  function render() {
+    const s = t();
+    document.documentElement.lang = lang;
+    document.title = s.title(want && want.code);
+    $('title').textContent = s.title(want && want.code); $('change').textContent = s.change; $('detailsLbl').textContent = s.details;
+    document.querySelectorAll('.lang button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.lang === lang)));
+    $('cueBtn').textContent = s.vib(cues); $('cueBtn').setAttribute('aria-pressed', cues);
+    $('voiceBtn').textContent = s.voice(voice); $('voiceBtn').setAttribute('aria-pressed', voice);
+    const hasPlan = state === 'ready' || state === 'nav' || state === 'arrived';
+    $('nav').hidden = !hasPlan; $('prefs').hidden = !hasPlan || state === 'arrived';
+    if (state === 'loading') showMsg(s.loading);
+    else if (state === 'error') showMsg(err === 'errMissing' ? s.errMissing(want.letter) : s[err], true);
+    else showMsg(fromCache && state === 'ready' ? s.cached : '');
+    const mb = $('mainBtn');
+    $('dock').hidden = !(state === 'ready' || state === 'nav' || (state === 'error' && err === 'errNet'));
+    mb.textContent = state === 'nav' ? s.stop : state === 'error' ? s.retry : s.start;
+    mb.className = state === 'nav' ? 'stop' : '';
+    if (hasPlan) renderNav();
+  }
+
+  // ---- controls ----
+  $('mainBtn').addEventListener('click', () => {
+    if (state === 'ready') start();
+    else if (state === 'nav') { if (confirm(t().stopQ)) { log('Navigation stopped.'); stop('ready'); } }
+    else if (state === 'error') load();
+  });
+  $('nextBtn').addEventListener('click', () => {
+    if (!active) return;
+    const x = plan[ri];
+    if (x.t === 'end') { arrive(); return; }
+    // Turning around in the lift must not carry over as a half-tracked turn.
+    if (x.t === 'lift') sensors.resetTurn();
+    log(x.t === 'lift' ? 'Out of the lift.' : 'Marked done manually.');
+    setIdx(ri+1);
+  });
+  $('prevBtn').addEventListener('click', () => { if (active && ri > 0) { log('Went back one instruction.'); setIdx(ri-1); } });
+  $('cueBtn').addEventListener('click', () => {
+    cues = !cues; try { localStorage.setItem('walksenseCues', cues ? '1' : '0'); } catch (_) {}
+    if (cues && navigator.vibrate) { try { navigator.vibrate(80); } catch (_) {} }
+    render();
+  });
+  $('voiceBtn').addEventListener('click', () => {
+    voice = !voice; try { localStorage.setItem('walksenseVoice', voice ? '1' : '0'); } catch (_) {}
+    // Speaking from the tap also unlocks speech synthesis on iOS.
+    if (voice) speak(t().voiceOn); else try { if (window.speechSynthesis) speechSynthesis.cancel(); } catch (_) {}
+    render();
+  });
+  document.querySelectorAll('.lang button').forEach(b => b.addEventListener('click', () => {
+    lang = b.dataset.lang; try { localStorage.setItem('lang', lang); } catch (_) {}
+    lastHtml = ''; render();
+  }));
+  window.addEventListener('beforeunload', e => { if (active) { e.preventDefault(); e.returnValue = ''; } });
+
+  load();
+})();
+</script>
+</body>
+</html>

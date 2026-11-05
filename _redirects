@@ -1,10 +1,11 @@
 # Netlify routing (publish directory: frontend). Rewrites (200) keep the short URL in the address bar.
 #
 #   /           delivery agent: pick floor + flat     (QR code at the gate points here)
-#   /go/C7      deep link straight to flat C, floor 7 (navigate.html, coming next)
+#   /go/C7      deep link straight to flat C, floor 7 (navigate.html). A 302, not a rewrite:
+#               navigate.html loads js/… by relative path, which would break under /go/.
 #   /admin      admin panel: record and save routes
 #   /lab        sensor test bench and threshold tuning
 /              /appartment.html   200
-/go/:code      /navigate.html?code=:code   200
+/go/:code      /navigate.html?code=:code   302
 /admin         /admin.html        200
 /lab           /lab.html          200
