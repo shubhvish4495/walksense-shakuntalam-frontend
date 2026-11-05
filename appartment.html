@@ -23,14 +23,14 @@
   --accent:#5cc79d; --accent-ink:#0b1812; --soft:#21382d; --shadow:0 18px 50px rgba(0,0,0,.55); color-scheme: dark;
 }
 *{box-sizing:border-box}
-:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
-html{scroll-padding-top:env(safe-area-inset-top,0px)}
-body{margin:0;min-height:100vh;color:var(--ink);font-family:"Hind","Noto Sans Devanagari",system-ui,sans-serif;font-size:17px;line-height:1.5;background:#14231c;position:relative}
+body{margin:0;min-height:100vh;min-height:100dvh;color:var(--ink);font-family:"Hind","Noto Sans Devanagari",system-ui,sans-serif;font-size:17px;line-height:1.5;background:#14231c;position:relative}
 /* Background photo + scrim */
 body::before{content:"";position:fixed;inset:0;z-index:-2;background:var(--photo) center/cover no-repeat}
 body::after{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradient(180deg,rgba(10,24,17,.55) 0%,rgba(10,24,17,.35) 40%,rgba(10,24,17,.78) 100%)}
 
-.wrap{min-height:100vh;display:flex;flex-direction:column;justify-content:space-between;padding:18px 16px 22px;max-width:520px;margin:0 auto}
+/* Phones: form sits right under the header, no stretched gap. Safe-area insets go on the content, not :root, so the page never exceeds the screen. */
+.wrap{display:flex;flex-direction:column;max-width:520px;margin:0 auto;
+  padding:max(16px,env(safe-area-inset-top)) max(14px,env(safe-area-inset-right)) max(20px,env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-left))}
 .top{display:flex;justify-content:space-between;align-items:center;gap:12px}
 .brand{color:#fff;font-family:"Baloo 2","Hind",sans-serif;font-weight:700;font-size:1.25rem;line-height:1.2;text-shadow:0 1px 8px rgba(0,0,0,.45)}
 .brand small{display:block;font-family:"Hind",sans-serif;font-weight:500;font-size:.8rem;opacity:.85}
@@ -38,7 +38,7 @@ body::after{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .lang button{border:0;background:transparent;color:#fff;font:inherit;font-weight:600;padding:5px 14px;border-radius:999px;cursor:pointer}
 .lang button[aria-pressed="true"]{background:#fff;color:#14392b}
 
-.card{background:var(--surface);border-radius:18px;padding:24px 22px 22px;box-shadow:var(--shadow);margin-top:40px}
+.card{background:var(--surface);border-radius:18px;padding:22px 20px 20px;box-shadow:var(--shadow);margin-top:20px}
 h1{font-family:"Baloo 2","Hind",sans-serif;font-size:1.65rem;line-height:1.2;margin:0}
 .sub{color:var(--muted);margin:4px 0 20px;font-size:.95rem}
 label{display:block;font-weight:600;margin:0 0 6px;font-size:.95rem}
@@ -59,9 +59,20 @@ select:focus-visible,button:focus-visible{outline:3px solid var(--accent);outlin
 
 /* Wide screens: blur the low-res photo behind, show it sharp in a side panel */
 .photo{display:none}
+/* Small or short phones: tighter spacing so the whole form fits without scrolling. */
+@media (max-width:380px), (max-height:700px){
+  .card{padding:18px 16px 16px;margin-top:14px}
+  h1{font-size:1.45rem}
+  .sub{margin-bottom:14px}
+  .field+.field{margin-top:12px}
+  select{padding-top:10px;padding-bottom:10px}
+  .result{margin-top:16px;min-height:68px;padding:10px 16px}
+  .result .num{font-size:1.9rem}
+  .confirm{padding:13px}
+}
 @media (min-width:900px){
   body::before{filter:blur(12px);transform:scale(1.06)}
-  .wrap{max-width:1000px;flex-direction:row;flex-wrap:wrap;align-content:center;justify-content:center;gap:0 32px;padding:28px}
+  .wrap{min-height:100vh;min-height:100dvh;max-width:1000px;flex-direction:row;flex-wrap:wrap;align-content:center;justify-content:center;gap:0 32px;padding:28px}
   .top{width:100%;margin-bottom:24px}
   .photo{display:block;flex:0 0 340px;border-radius:18px;background:var(--photo) center/cover no-repeat;box-shadow:var(--shadow);min-height:520px;border:3px solid rgba(255,255,255,.85)}
   .card{flex:0 0 420px;margin-top:0;align-self:center}
