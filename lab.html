@@ -1,0 +1,638 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>WalkSense</title>
+<style>
+  :root { --lift:60px; --paper:#f3f0e8; --card:#faf8f3; --ink:#1c1b18; --mute:#74705f; --rule:#cfc9b8; --accent:#d8401f; --hi:#ffe14d;
+          --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif; --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+  @media (prefers-color-scheme:dark) { :root { --paper:#151410; --card:#1c1b16; --ink:#ece8da; --mute:#9a9582; --rule:#38352b; --accent:#ff6a45; --hi:#5c4d00; } }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body { margin:0; background:var(--paper); color:var(--ink); font:16px/1.5 "Helvetica Neue",Arial,sans-serif; }
+  main { max-width:560px; margin:0 auto; padding:max(20px,env(safe-area-inset-top)) 18px calc(96px + var(--lift) + env(safe-area-inset-bottom)); }
+  .top { display:flex; justify-content:space-between; align-items:baseline; border-bottom:2px solid var(--ink); padding-bottom:10px; }
+  .brand { font:700 22px/1 var(--serif); letter-spacing:-.3px; }
+  .brand i { font-style:normal; color:var(--accent); }
+  .status { font:12px var(--mono); text-transform:uppercase; letter-spacing:.8px; color:var(--mute); display:flex; align-items:center; gap:7px; }
+  .dot { width:9px; height:9px; background:var(--rule); }
+  .dot.live { background:var(--accent); animation:blink 1.2s steps(2,jump-none) infinite; }
+  @keyframes blink { 50% { opacity:.25; } }
+  .lbl { font:11px var(--mono); text-transform:uppercase; letter-spacing:1px; color:var(--mute); }
+  .hero { display:grid; grid-template-columns:1fr auto; align-items:end; gap:12px; padding:22px 0 18px; border-bottom:1px solid var(--rule); }
+  .steps { font:400 clamp(84px,26vw,128px)/.85 var(--serif); letter-spacing:-4px; font-variant-numeric:tabular-nums; display:inline-block; margin-top:8px; }
+  .steps.pulse { animation:tick .18s ease-out; }
+  @keyframes tick { from { transform:translateY(5px); } to { transform:none; } }
+  .clock { font:15px var(--mono); text-align:right; padding-bottom:6px; }
+  .turnline { display:flex; justify-content:space-between; padding:11px 0; border-bottom:1px solid var(--rule); font:13px var(--mono); }
+  .nav { margin-top:18px; border:2px solid var(--ink); background:var(--card); }
+  .navmain { display:grid; grid-template-columns:auto 1fr; gap:14px; align-items:center; padding:16px; background:var(--ink); color:var(--paper); }
+  .nicon { font:400 64px/1 var(--serif); width:72px; text-align:center; }
+  .ntxt { font:400 28px/1.1 var(--serif); }
+  .nsub { font:12px var(--mono); opacity:.75; margin-top:6px; }
+  .nbar { height:6px; background:var(--rule); } .nfill { height:100%; width:0; background:var(--accent); transition:width .15s; }
+  .then { padding:10px 16px; border-bottom:1px solid var(--rule); font:13px var(--mono); }
+  .then[hidden], .navbtns[hidden] { display:none; }
+  .list { max-height:220px; overflow:auto; position:relative; }
+  .list:empty::after { content:"Your route will appear here as you walk"; display:block; padding:16px; font:12px var(--mono); color:var(--mute); }
+  .it { display:flex; gap:12px; align-items:center; padding:10px 16px; border-bottom:1px solid var(--rule); font-size:14px; }
+  .it.cur { background:var(--hi); font-weight:600; } .it.done { opacity:.4; }
+  .ii { font:22px/1 var(--serif); width:28px; text-align:center; color:var(--accent); }
+  .navbtns { display:grid; grid-template-columns:1fr 1fr; gap:8px; padding:12px 16px; }
+  .grid { display:grid; grid-template-columns:repeat(3,1fr); border-left:1px solid var(--rule); border-top:1px solid var(--rule); margin-top:18px; background:var(--card); }
+  .cell { border-right:1px solid var(--rule); border-bottom:1px solid var(--rule); padding:11px 12px 12px; min-width:0; }
+  .v { display:block; font:400 34px/1.1 var(--serif); margin-top:8px; font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .v i { font:12px var(--mono); font-style:normal; color:var(--mute); margin-left:3px; }
+  .cell.flash { animation:mark 1s ease-out; }
+  @keyframes mark { 0% { background:var(--hi); } 100% { background:transparent; } }
+  .row3 { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-top:14px; }
+  button, .btn { font:600 13px var(--mono); text-transform:uppercase; letter-spacing:.6px; background:transparent; color:var(--ink); border:1px solid var(--ink); border-radius:2px; padding:11px 6px; cursor:pointer; text-align:center; }
+  button:active, .btn:active { background:var(--ink); color:var(--paper); }
+  button:disabled { opacity:.35; cursor:not-allowed; }
+  .note { font-size:13px; color:var(--mute); margin:16px 0 0; padding-left:12px; border-left:3px solid var(--accent); }
+  details { border-bottom:1px solid var(--rule); }
+  summary { list-style:none; cursor:pointer; padding:15px 0; display:flex; justify-content:space-between; font:600 12px var(--mono); text-transform:uppercase; letter-spacing:1px; }
+  summary::-webkit-details-marker { display:none; }
+  summary::after { content:"+"; } details[open] summary::after { content:"–"; }
+  .sec { margin-top:20px; border-top:2px solid var(--ink); }
+  .body { padding-bottom:16px; }
+  .kv { display:flex; justify-content:space-between; gap:12px; padding:8px 0; border-bottom:1px dotted var(--rule); font-size:14px; align-items:center; }
+  .kv span:first-child { color:var(--mute); } .kv strong { font:500 13px var(--mono); text-align:right; }
+  input[type=number] { width:80px; font:500 13px var(--mono); background:var(--card); color:var(--ink); border:1px solid var(--rule); padding:6px; }
+  .log { max-height:190px; overflow:auto; font:12px/1.4 var(--mono); color:var(--mute); }
+  .log p { margin:0; padding:6px 0; border-bottom:1px dotted var(--rule); }
+  .body p.small { font-size:13px; color:var(--mute); margin:0 0 8px; }
+  .dock { position:fixed; left:0; right:0; bottom:0; background:var(--paper); border-top:2px solid var(--ink); padding:12px 18px calc(12px + var(--lift) + env(safe-area-inset-bottom)); }
+  .dock div { max-width:560px; margin:0 auto; display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
+  .dock button { padding:16px 4px; font-size:13px; }
+  #startBtn { background:var(--ink); color:var(--paper); }
+  #retraceBtn { background:var(--accent); color:#fff; border-color:var(--accent); }
+  #startBtn:disabled, #retraceBtn:disabled { background:var(--rule); color:var(--mute); border-color:var(--rule); opacity:1; }
+</style>
+</head>
+<body>
+<main>
+  <div class="top">
+    <div class="brand">Walk<i>/</i>Sense</div>
+    <div class="status"><span class="dot" id="statusDot"></span><span id="statusText">Not tracking</span></div>
+  </div>
+
+  <section class="hero">
+    <div><div class="lbl">Steps</div><div class="steps" id="steps">0</div></div>
+    <div class="clock"><div class="lbl">Elapsed</div><span id="elapsed">00:00</span></div>
+  </section>
+  <div class="turnline"><span class="lbl">Turn detector</span><span id="turnState">Idle</span></div>
+
+  <section class="nav">
+    <div class="navmain"><div class="nicon" id="nIcon">↑</div><div><div class="ntxt" id="nTxt">No route yet</div><div class="nsub" id="nSub">Tap Record and start walking.</div></div></div>
+    <div class="nbar"><div class="nfill" id="nFill"></div></div>
+    <div class="then" id="nThen" hidden></div>
+    <div class="list" id="nList"></div>
+    <div class="navbtns" id="nBtns" hidden><button id="prevBtn">◀ Back</button><button id="nextBtn">Done ▶</button></div>
+  </section>
+
+  <div class="grid">
+    <div class="cell" id="leftTile"><span class="lbl">Left turns</span><span class="v" id="leftTurns">0</span></div>
+    <div class="cell" id="rightTile"><span class="lbl">Right turns</span><span class="v" id="rightTurns">0</span></div>
+    <div class="cell"><span class="lbl">Steps/min</span><span class="v" id="cadence">—</span></div>
+    <div class="cell" id="upTile"><span class="lbl">Climbed</span><span class="v"><span id="ascent">0</span><i>m</i></span></div>
+    <div class="cell" id="downTile"><span class="lbl">Descended</span><span class="v"><span id="descent">0</span><i>m</i></span></div>
+    <div class="cell"><span class="lbl">Elevation</span><span class="v" id="trend">—</span></div>
+  </div>
+
+  <div class="row3">
+    <button id="manualStep">+ Step</button><button id="manualLeft">+ Left</button><button id="manualRight">+ Right</button><button id="undoTurn" disabled>Undo turn</button>
+  </div>
+  <div class="row3" style="grid-template-columns:1fr 1fr">
+    <button id="cueBtn" aria-pressed="true">Vibration: on</button><button id="voiceBtn" aria-pressed="false">Voice: off</button>
+  </div>
+  <p class="note"><b>Record</b> from your parking spot and walk to the mall. Only two things are stored: walking straight (as a step count) and turns (left or right). To go back, stand where you stopped, face back the way you came, and tap <b>Retrace</b> for turn-by-turn directions. Steps and turns are detected automatically. If one is missed, use <b>+ Step</b>, <b>+ Left</b>, <b>+ Right</b> (or <b>Undo turn</b> while recording), and <b>Back</b> / <b>Done</b> while retracing.</p>
+
+  <div class="sec">
+    <details open>
+      <summary>Saved route</summary>
+      <div class="body">
+        <p class="small">The latest recording autosaves in this browser. You can also save it as a file and load it later or on another device.</p>
+        <div class="kv"><span>Saved route</span><strong id="routeInfo">None</strong></div>
+        <div class="row3" style="grid-template-columns:1fr" id="restoreRow" hidden><button id="restoreBtn">Undo new recording</button></div>
+        <div class="row3" style="grid-template-columns:1fr 1fr">
+          <button id="saveFileBtn">Save file</button>
+          <label class="btn" for="loadFile">Load file</label>
+        </div>
+        <input type="file" id="loadFile" accept=".json,application/json" hidden>
+        <div class="row3" style="grid-template-columns:1fr 1fr"><button id="copyTxtBtn">Copy as text</button><button id="loadTxtBtn">Load from text</button></div>
+        <textarea id="pathText" rows="3" placeholder="Route text appears here. Paste saved route text here to load it." style="width:100%;margin-top:8px;font:11px var(--mono);background:var(--card);color:var(--ink);border:1px solid var(--rule);padding:8px"></textarea>
+        <div class="kv" style="margin-top:12px"><span>Stride length (m)</span><input type="number" id="strideIn" min="0.3" max="1.4" step="0.05" value="0.7"></div>
+        <div class="kv"><span>Left and right look swapped?</span><button id="swapBtn" style="padding:7px 10px">Swap L/R</button></div>
+      </div>
+    </details>
+    <details open>
+      <summary>Tuning</summary>
+      <div class="body">
+        <p class="small">Test thresholds here. Changes apply immediately and are remembered in this browser.</p>
+        <div id="tuneBox"></div>
+        <div class="row3" style="grid-template-columns:1fr"><button id="tuneReset">Reset to defaults</button></div>
+      </div>
+    </details>
+    <details>
+      <summary>Sensors</summary>
+      <div class="body">
+        <div class="kv"><span>Motion</span><strong id="motionState">Waiting</strong></div>
+        <div class="kv"><span>Vertical accel.</span><strong id="accel">—</strong></div>
+        <div class="kv"><span>GPS altitude</span><strong id="altNow">—</strong></div>
+        <div class="kv"><span>Net change</span><strong id="netAlt">—</strong></div>
+        <div class="kv"><span>Elevation source</span><strong id="altState">Waiting</strong></div>
+      </div>
+    </details>
+    <details open>
+      <summary>Activity log</summary>
+      <div class="body">
+        <div class="log" id="log"><p>Ready. Tap Record and allow motion and location access.</p></div>
+        <div class="row3" style="grid-template-columns:1fr"><button id="resetBtn">Reset counters</button></div>
+      </div>
+    </details>
+    <details>
+      <summary>How it works</summary>
+      <div class="body"><p class="small">Steps are peaks in vertical acceleration. A turn is 30° or more of rotation about the vertical axis while walking, read from the gyroscope, so it works however you hold the phone. The route is a list like “walk 24 steps, turn left, walk 10 steps”. Retrace reverses the list and flips each turn, then counts your steps down and watches for the turn. Step counts are only a rough guide, so the app shows a range rather than a single number, warns you when the turn is near, and keeps waiting if you walk past the count. A turn you actually make is trusted over the count: it advances the directions wherever you make it, except in the first few steps of a long stretch. After the first turn the app measures how your return pace compares with the recording and scales the remaining counts to match. Vibration and spoken cues fire when a turn is coming up, when you reach it, and on arrival. Not a validated navigation tool.</p></div>
+    </details>
+  </div>
+</main>
+<div class="dock"><div><button id="startBtn">Record</button><button id="retraceBtn" disabled>Retrace</button><button id="stopBtn" disabled>Stop</button></div></div>
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  let active = false, mode = 'record', startAt = 0, elapsedTimer = null, wakeLock = null;
+  let steps = 0, leftTurns = 0, rightTurns = 0, stepTimes = [];
+  let g = null, lastT = 0, vS = 0, v1 = 0, v2 = 0, t1 = 0, ampAvg = 1.5, stepGap = 500;
+  let lastStepAt = 0, pending = [], walking = false;
+  let yawS = 0, seg = null, lastTurnAt = 0, yawBuf = [];
+  const ELEV_STEP = 3;
+  let watchId = null, altS = null, altRef = null, altStart = null, ascent = 0, descent = 0, lastElevAt = 0, lastElevDir = 0;
+  // Route: [{t:'s', n:steps}, {t:'t', d:'L'|'R'}, ...]. While recording, the last item is always the open straight.
+  const KEY = 'walksenseRoute', ICON = {s:'↑', L:'↰', R:'↱'};
+  let stride = 0.7, route = [], rt = [], ri = 0, rem = 0, lastHtml = '';
+  // retrace calibration (F-1) and overshoot tracking (F-2)
+  let legSteps = 0, legRatio = 1, calibN = 0, overshoot = 0;
+  // record-overwrite guard (B-3)
+  let prevRoute = null, confirmAt = 0, confirmTimer = null;
+  // turn cues (F-3)
+  let cueKey = '', cues = true, voice = false;
+  try { cues = localStorage.getItem('walksenseCues') !== '0'; voice = localStorage.getItem('walksenseVoice') === '1'; } catch (_) {}
+  const DEF = {warnPct:25, warnMin:4, earlyPct:50, earlyMin:6, turnDeg:30, startRate:12, keepRate:6, holdMs:500, cooldown:800, warmup:4, stepThr:0.6};
+  let T = {...DEF}, TURN_MIN_DEG, START_RATE, KEEP_RATE, HOLD_MS;
+  try { const s = JSON.parse(localStorage.getItem('walksenseTune') || '{}') || {}; for (const k in DEF) if (s[k] != null && Number.isFinite(+s[k])) T[k] = +s[k]; } catch (_) {}
+  const applyTune = () => { TURN_MIN_DEG = T.turnDeg; START_RATE = T.startRate; KEEP_RATE = T.keepRate; HOLD_MS = T.holdMs; };
+  applyTune();
+  const IOS = typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function';
+  let flip = false;
+  try { flip = localStorage.getItem('walksenseFlip') === '1'; } catch (_) {}
+  const upSign = () => (IOS ? 1 : -1) * (flip ? -1 : 1);
+  const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
+  const fmtTime = ms => { const s = Math.floor(ms/1000); return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0'); };
+  const flash = (id, cls) => { const el = $(id); if (!el) return; el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); };
+  const clean = r => { const o = r.filter(x => x.t === 't' || x.n > 0); while (o.length && o[o.length-1].t === 't') o.pop(); return o; };
+  const routeOk = () => clean(route).length > 0;
+  const meters = n => Math.round(n*stride);
+  // Recorded counts are scaled by the pace factor measured so far this session (F-1).
+  const legTarget = x => x && x.t === 's' ? Math.max(1, Math.round(x.n*legRatio)) : 0;
+  // Step-count error has a systematic part (~N) and a random part (~sqrt N); the
+  // systematic part shrinks as the pace factor converges.
+  const bandFor = n => Math.max(2, Math.round(Math.max(0.04, 0.12/(1+calibN))*n + 1.5*Math.sqrt(n)));
+  const word = d => d === 'L' ? 'left' : 'right';
+  const say = x => x.t === 's' ? `Walk straight · about ${x.n} steps (~${meters(x.n)} m)` : `Turn ${word(x.d)}`;
+  const stats = () => { const c = clean(route); return `${c.reduce((s,x) => s + (x.t === 's' ? x.n : 0), 0)} steps · ${c.filter(x => x.t === 't').length} turns`; };
+  const buildRetrace = () => clean(route).reverse().map(x => x.t === 's' ? {t:'s', n:x.n} : {t:'t', d:x.d === 'L' ? 'R' : 'L'});
+  function log(message) {
+    const time = new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    const p = document.createElement('p'); p.textContent = `${time} · ${message}`;
+    $('log').prepend(p);
+    while ($('log').children.length > 40) $('log').lastElementChild.remove();
+  }
+  // ---- persistence ----
+  function serialize() {
+    return JSON.stringify({v:2, app:'walksense', stride, saved:new Date().toISOString(),
+      route:clean(route).map(x => x.t === 's' ? ['s', x.n] : ['t', x.d])});
+  }
+  function save() { if (!routeOk()) return; try { localStorage.setItem(KEY, serialize()); } catch (_) {} }
+  function loadStr(s) {
+    const o = JSON.parse(s);
+    if (!o || !Array.isArray(o.route) || !o.route.length) throw new Error(o && o.pts ? 'That file is from the older angle-based version. Record a new route.' : 'No route found in that file.');
+    const r = o.route.map(a => a[0] === 's' ? {t:'s', n:Math.round(+a[1])} : {t:'t', d:a[1]});
+    if (r.some(x => x.t === 's' ? !(x.n > 0) : (x.d !== 'L' && x.d !== 'R'))) throw new Error('Route data is corrupted.');
+    route = r; rt = [];
+    if (o.stride >= 0.3 && o.stride <= 1.4) { stride = o.stride; $('strideIn').value = stride; }
+  }
+  try { const s = localStorage.getItem(KEY); if (s) loadStr(s); } catch (_) { route = []; }
+
+  // ---- cues (F-3) ----
+  function speak(text) {
+    if (!voice || !text || !window.speechSynthesis) return;
+    try { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(text); u.rate = 1; speechSynthesis.speak(u); } catch (_) {}
+  }
+  const CUE_PAT = {soon:[70,80,70], turn:[150,90,150], arrived:[180,90,180,90,180]};
+  // Fires once per state transition, never on the repeating render tick.
+  function cue(key, kind, phrase) {
+    if (key === cueKey) return;
+    cueKey = key;
+    if (!key || !active) return;
+    if (cues && navigator.vibrate) { try { navigator.vibrate(CUE_PAT[kind] || 100); } catch (_) {} }
+    speak(phrase);
+  }
+  // ---- turn-by-turn display ----
+  function renderNav() {
+    const retr = active && mode === 'retrace';
+    const list = retr ? rt : active ? route.filter((x, i) => x.t === 't' || x.n > 0 || i === route.length-1) : clean(route);
+    let icon = '↑', txt = 'No route yet', sub = 'Tap Record and start walking. Turns are detected for you.', frac = 0, then = '';
+    if (retr) {
+      const x = rt[ri], nx = rt[ri+1];
+      if (!x) { icon = '✓'; txt = 'You have arrived'; sub = 'Tap Stop to finish.'; frac = 1; cue('arrived', 'arrived', 'You have arrived'); }
+      else if (x.t === 's') {
+        const target = legTarget(x), tol = Math.max(T.warnMin, Math.round(target*T.warnPct/100));
+        const band = bandFor(target), lo = Math.max(0, rem-band), hi = rem+band;
+        const dest = nx && nx.t === 't' ? 'to the turn' : 'to the end';
+        txt = 'Walk straight'; sub = `≈ ${lo}–${hi} steps ${dest} · ~${meters(rem)} m`; frac = (target-rem)/target;
+        if (rem <= tol && nx && nx.t === 't') {
+          icon = ICON[nx.d]; txt = `Turn ${word(nx.d)} soon`;
+          sub = `Within the next ${hi} steps — turn when you see it, not when this hits zero.`;
+          cue(`soon${ri}`, 'soon', `Turn ${word(nx.d)} soon`);
+        } else cue('', 'soon');
+      }
+      else {
+        icon = ICON[x.d]; txt = `Turn ${word(x.d)} now`;
+        sub = overshoot > 0
+          ? `You should be at the turn — ${overshoot} steps past the estimate. Trust what you see.`
+          : 'Turn when you reach it, or tap Done.';
+        cue(`turn${ri}`, 'turn', `Turn ${word(x.d)} now`);
+      }
+      if (x && nx) then = nx.t === 's' ? `Then: walk straight ${legTarget(nx)} steps` : `Then: turn ${word(nx.d)}`;
+    } else if (active) { cueKey = ''; icon = '●'; txt = 'Recording'; sub = `${route[route.length-1].n} steps since the last turn`; }
+    else if (routeOk()) { cueKey = ''; icon = '✓'; txt = 'Route saved'; sub = `${stats()} · tap Retrace to go back`; }
+    else cueKey = '';
+    $('nIcon').textContent = icon; $('nTxt').textContent = txt; $('nSub').textContent = sub;
+    $('nFill').style.width = `${Math.round(clamp(frac, 0, 1)*100)}%`;
+    $('nThen').hidden = !then; $('nThen').textContent = then;
+    $('nBtns').hidden = !retr;
+    const html = list.map((x, i) => `<div class="it${retr && i === ri ? ' cur' : ''}${retr && i < ri ? ' done' : ''}"><span class="ii">${ICON[x.t === 's' ? 's' : x.d]}</span><span>${say(x)}</span></div>`).join('');
+    if (html !== lastHtml) {
+      lastHtml = html; const l = $('nList'); l.innerHTML = html;
+      const c = l.querySelector('.cur'); l.scrollTop = c ? Math.max(0, c.offsetTop - 8) : (active ? l.scrollHeight : 0);
+    }
+  }
+  function render() {
+    const now = performance.now();
+    if (walking && now - lastStepAt > 1500) { walking = false; ampAvg = 1.5; }
+    if (pending.length && now - lastStepAt > 1200) flushPending();
+    if (pending.length && now - lastStepAt > 4000) pending = [];
+    $('steps').textContent = steps;
+    $('leftTurns').textContent = leftTurns;
+    $('rightTurns').textContent = rightTurns;
+    $('elapsed').textContent = fmtTime(startAt ? Date.now()-startAt : 0);
+    const recent = stepTimes.filter(t => now-t < 10000).length;
+    $('cadence').textContent = recent >= 3 ? Math.round(recent*6) : '—';
+    $('ascent').textContent = Math.round(ascent);
+    $('descent').textContent = Math.round(descent);
+    $('trend').textContent = !active || altS == null ? '—' : (now-lastElevAt < 25000 && lastElevDir ? (lastElevDir > 0 ? '↑ Up' : '↓ Down') : 'Level');
+    $('netAlt').textContent = altS == null ? '—' : `${(altS-altStart >= 0 ? '+' : '')}${(altS-altStart).toFixed(1)} m`;
+    $('statusText').textContent = active ? (mode === 'retrace' ? 'Retracing' : walking ? 'Recording · walking' : 'Recording') : 'Not tracking';
+    $('statusDot').classList.toggle('live', active);
+    $('startBtn').disabled = active;
+    $('startBtn').textContent = !active && confirmAt ? 'Replace route?' : 'Record';
+    $('restoreRow').hidden = active || !prevRoute;
+    $('stopBtn').disabled = !active;
+    $('undoTurn').disabled = !(active && mode === 'record' && route.some(x => x.t === 't'));
+    $('retraceBtn').disabled = active || !routeOk();
+    $('saveFileBtn').disabled = $('copyTxtBtn').disabled = !routeOk();
+    $('routeInfo').textContent = routeOk() ? stats() : 'None';
+    renderNav();
+  }
+  // ---- retrace logic ----
+  function setIdx(i) {
+    ri = clamp(i, 0, rt.length); const x = rt[ri];
+    rem = legTarget(x);
+    // A leg starts at a straight; while standing on a turn, legSteps keeps running so
+    // overshoot past the estimate is included in the calibration sample (F-1).
+    if (!x || x.t === 's') legSteps = 0;
+    overshoot = 0;
+    if (!x && rt.length) log('Arrived at the start point.');
+    render();
+  }
+  function retraceStep() {
+    const x = rt[ri]; if (!x) return;
+    if (x.t !== 's') { overshoot++; return; }
+    rem--; if (rem <= 0) setIdx(ri+1);
+  }
+  // Measure how this session's pace compares with the recording, from the leg just walked.
+  function calibrate(j) {
+    const expected = rt[j-1] && rt[j-1].t === 's' ? rt[j-1].n : 0;
+    if (expected < 8 || legSteps < 1) return;
+    const r = clamp(legSteps/expected, 0.6, 1.6);
+    legRatio = legRatio*0.6 + r*0.4; calibN++;
+    log(`Calibrated: walked ${legSteps} steps where ${expected} were recorded · pace factor ${legRatio.toFixed(2)}`);
+  }
+  function retraceTurn(d, manual) {
+    const x = rt[ri]; let j = -1;
+    if (x && x.t === 't') j = ri;
+    else if (x && x.t === 's' && rt[ri+1] && rt[ri+1].t === 't') {
+      // A deliberate turn is stronger positional evidence than a step count from a
+      // different walk, so it always advances — except in the first ~15% of a long
+      // stretch, which is more likely a step around an obstacle (B-2).
+      const target = legTarget(x), walked = target - rem;
+      if (target >= 12 && walked < target*0.15) {
+        log(`Turn ignored — only ${walked} of about ${target} steps into this stretch. Tap Done if you really are at the turn.`);
+        return;
+      }
+      if (rem > Math.max(T.earlyMin, target*T.earlyPct/100)) log(`Turn came ${rem} steps earlier than expected — recalibrating.`);
+      j = ri+1;
+    }
+    if (j < 0) { log('Turn not expected here, ignored.'); return; }
+    if (rt[j].d !== d) { log(`Expected a ${word(rt[j].d)} turn but saw ${word(d)}. Tap Done to skip it.`); return; }
+    if (!manual) calibrate(j); // a manual Done carries no information about step accuracy
+    setIdx(j+1);
+  }
+  function addStep(t = performance.now(), manual = false) {
+    steps++; stepTimes.push(t); flash('steps','pulse');
+    stepTimes = stepTimes.filter(x => t-x < 60000);
+    if (active) {
+      if (mode === 'record') { route[route.length-1].n++; if (steps % 15 === 0) save(); }
+      else { legSteps++; retraceStep(); }
+    }
+    if (manual) log('Manual step added');
+    render();
+  }
+  function addTurn(direction, manual = false, deg = 0) {
+    const d = direction === 'left' ? 'L' : 'R';
+    if (active && mode === 'record') {
+      const prev = route[route.length-2], l = route[route.length-1];
+      if (!manual && l.n === 0 && prev && prev.t === 't' && prev.d === d) { log('Same-direction turn merged into the previous one'); return; }
+      route.push({t:'t', d}, {t:'s', n:0}); save();
+    }
+    if (direction === 'left') leftTurns++; else rightTurns++;
+    lastTurnAt = performance.now(); flash(direction === 'left' ? 'leftTile' : 'rightTile','flash');
+    $('turnState').textContent = `${direction.toUpperCase()} turn detected`;
+    log(`${manual ? 'Manual ' : ''}${direction} turn${manual ? ' added' : ' detected (~'+deg+'°)'}`);
+    if (active && mode === 'retrace') retraceTurn(d, manual);
+    render();
+  }
+  function undoTurn() {
+    if (!active || mode !== 'record') return;
+    let i = -1; route.forEach((x, k) => { if (x.t === 't') i = k; });
+    if (i < 1) { log('No turns to undo.'); return; }
+    const d = route[i].d;
+    route.splice(i-1, 3, {t:'s', n:route[i-1].n + route[i+1].n});
+    if (d === 'L') leftTurns = Math.max(0, leftTurns-1); else rightTurns = Math.max(0, rightTurns-1);
+    seg = null; lastTurnAt = 0; save();
+    log(`Removed ${word(d)} turn`); render();
+  }
+  // ---- Steps ----
+  // Buffered candidates are committed on a pause rather than thrown away: stop-start
+  // walking is exactly the gait of someone retracing a route, and it clusters near
+  // turns, so discarding the buffer loses whole legs of the countdown (B-1).
+  function flushPending() {
+    if (pending.length < 2) return;
+    const p = pending; pending = [];
+    p.forEach(x => addStep(x));
+  }
+  function onStepCandidate(t, amp) {
+    const gap = t - lastStepAt;
+    // Two candidates are enough to believe a retrace walker: a spurious step costs one
+    // off the countdown, a lost burst costs the whole leg.
+    const warmup = mode === 'retrace' && active ? 2 : Math.max(2, T.warmup);
+    if (walking && gap > 1500) walking = false;
+    if (gap > 4000) pending = [];      // genuinely stale — not the same walk
+    else if (gap > 1200) flushPending();
+    if (lastStepAt && gap >= 250 && gap <= 1200) stepGap = stepGap*0.7 + gap*0.3;
+    lastStepAt = t; ampAvg = ampAvg*0.8 + amp*0.2;
+    if (walking) addStep(t);
+    else {
+      pending.push(t);
+      if (pending.length >= warmup) { walking = true; const p = pending; pending = []; p.forEach(x => addStep(x)); }
+    }
+  }
+  // ---- Turns ----
+  function finishTurn(now) {
+    const s = seg; seg = null; $('turnState').textContent = 'Idle';
+    if (!s) return;
+    const deg = Math.abs(s.angle), dur = now - s.start;
+    // Recent step activity, not the sustained-walking flag: a hesitant walker pausing
+    // at a corner is still walking the route (B-1).
+    const ok = walking || now-lastStepAt < 5000;
+    if (deg >= TURN_MIN_DEG && dur < 6000 && ok && now-lastTurnAt > T.cooldown) addTurn(s.angle > 0 ? 'left' : 'right', false, Math.round(deg));
+    else if (deg >= 15) log(`Rotation of ${Math.round(deg)}° ignored (${deg < TURN_MIN_DEG ? 'below '+TURN_MIN_DEG+'° minimum' : !ok ? 'no recent steps' : 'too slow / cooldown'})`);
+  }
+  function trackTurn(yaw, ys, dt, now) {
+    yawBuf.push({t:now, a:yaw*dt});
+    while (yawBuf.length && now - yawBuf[0].t > 600) yawBuf.shift();
+    if (!seg) {
+      if (Math.abs(ys) <= START_RATE) return;
+      seg = {angle: yawBuf.reduce((x,b)=>x+b.a,0), start:now, last:now, dir:Math.sign(ys)};
+      yawBuf = [];
+      return;
+    }
+    seg.angle += yaw*dt;
+    if (Math.abs(ys) > KEEP_RATE && Math.sign(ys) === seg.dir) seg.last = now;
+    else if (Math.abs(ys) > START_RATE) { finishTurn(now); return; }
+    $('turnState').textContent = `Turning… ${Math.abs(Math.round(seg.angle))}°`;
+    if (now - seg.last > HOLD_MS || now - seg.start > 6000) finishTurn(now);
+  }
+  function handleMotion(e) {
+    if (!active) return;
+    const ag = e.accelerationIncludingGravity;
+    if (!ag || ag.x == null || ag.y == null || ag.z == null) { $('motionState').textContent = 'No accelerometer data'; return; }
+    $('motionState').textContent = 'Receiving';
+    const now = performance.now();
+    const dt = lastT ? Math.min((now-lastT)/1000, 0.1) : 0.016; lastT = now;
+    const a = [ag.x, ag.y, ag.z];
+    if (!g) g = a.slice();
+    const kg = dt/(0.6+dt);
+    for (let i = 0; i < 3; i++) g[i] += kg*(a[i]-g[i]);
+    const gm = Math.hypot(g[0],g[1],g[2]) || 9.81;
+    const vert = (a[0]*g[0]+a[1]*g[1]+a[2]*g[2])/gm - gm;
+    vS += dt/(0.04+dt)*(vert - vS);
+    const thr = clamp(ampAvg*0.5, T.stepThr, 3);
+    if (v1 > v2 && v1 >= vS && v1 > thr && t1 - lastStepAt > Math.max(250, stepGap*0.5)) onStepCandidate(t1, v1);
+    v2 = v1; v1 = vS; t1 = now;
+    $('accel').textContent = `${Math.abs(vS).toFixed(2)} m/s² (thr ${thr.toFixed(2)})`;
+    const r = e.rotationRate;
+    if (r) {
+      const yaw = upSign()*((r.beta||0)*g[0] + (r.gamma||0)*g[1] + (r.alpha||0)*g[2])/gm; // +ve = left
+      yawS += dt/(0.15+dt)*(yaw - yawS);
+      trackTurn(yaw, yawS, dt, now);
+    }
+  }
+  // ---- Elevation ----
+  function handlePosition(pos) {
+    const c = pos.coords, acc = c.altitudeAccuracy;
+    if (c.altitude == null || !Number.isFinite(c.altitude)) { $('altState').textContent = 'No altitude from GPS'; return; }
+    if (acc != null && acc > 25) { $('altState').textContent = `Weak signal (±${Math.round(acc)} m)`; return; }
+    $('altState').textContent = acc != null ? `GPS ±${Math.round(acc)} m` : 'GPS';
+    $('altNow').textContent = `${c.altitude.toFixed(1)} m`;
+    if (altS == null) { altS = altRef = altStart = c.altitude; return; }
+    altS += clamp(3/(acc || 10), 0.05, 0.3)*(c.altitude - altS);
+    const d = altS - altRef;
+    if (Math.abs(d) >= ELEV_STEP) {
+      if (d > 0) ascent += d; else descent -= d;
+      lastElevAt = performance.now(); lastElevDir = Math.sign(d); altRef = altS;
+      flash(d > 0 ? 'upTile' : 'downTile','flash');
+      log(`Elevation ${d > 0 ? 'gain' : 'loss'} of ~${Math.abs(d).toFixed(1)} m`);
+    }
+    render();
+  }
+  function startElevation() {
+    if (!navigator.geolocation) { $('altState').textContent = 'Not supported'; return; }
+    $('altState').textContent = 'Locating…';
+    watchId = navigator.geolocation.watchPosition(handlePosition,
+      err => { $('altState').textContent = err.code === 1 ? 'Permission denied' : 'Unavailable'; log('Elevation unavailable: ' + err.message); },
+      {enableHighAccuracy:true, maximumAge:1000, timeout:20000});
+  }
+  function stopElevation() { if (watchId != null) navigator.geolocation.clearWatch(watchId); watchId = null; }
+  async function getWakeLock() { try { if (navigator.wakeLock) wakeLock = await navigator.wakeLock.request('screen'); } catch (_) {} }
+
+  // ---- Controls ----
+  function clearRecordConfirm() { confirmAt = 0; clearTimeout(confirmTimer); confirmTimer = null; }
+  function armRecordConfirm() {
+    confirmAt = performance.now(); clearTimeout(confirmTimer);
+    confirmTimer = setTimeout(() => { clearRecordConfirm(); render(); }, 6000);
+    log(`A saved route exists (${stats()}). Tap Record again within 6 s to replace it.`);
+    render();
+  }
+  function resetLive() {
+    steps = leftTurns = rightTurns = 0; startAt = 0; lastStepAt = lastTurnAt = 0; stepTimes = []; walking = false; pending = []; seg = null;
+    legSteps = 0; legRatio = 1; calibN = 0; overshoot = 0; cueKey = '';
+    altS = altRef = altStart = null; ascent = descent = 0; lastElevDir = 0; $('altNow').textContent = '—'; $('altState').textContent = 'Waiting';
+  }
+  async function start(m) {
+    if (!window.isSecureContext) { log('HTTPS is required for reliable sensor access.'); return; }
+    if (m === 'retrace' && !buildRetrace().length) { log('Nothing to retrace yet.'); return; }
+    // A single mis-tap on Record used to destroy the saved route outright (B-3).
+    if (m === 'record' && routeOk() && !confirmAt) { armRecordConfirm(); return; }
+    clearRecordConfirm();
+    try {
+      const S = window.DeviceMotionEvent;
+      if (!S) throw new Error('Motion sensors are not supported in this browser.');
+      if (typeof S.requestPermission === 'function') {
+        if (await S.requestPermission() !== 'granted') throw new Error('Sensor permission was not granted.');
+      }
+      resetLive(); mode = m; lastHtml = '';
+      // Keep the route that is about to be overwritten so it can be put back (B-3).
+      if (m === 'record') { if (routeOk()) prevRoute = clean(route).map(x => ({...x})); route = [{t:'s', n:0}]; }
+      else { rt = buildRetrace(); }
+      active = true; startAt = Date.now();
+      if (m === 'retrace') setIdx(0);
+      g = null; lastT = 0; vS = v1 = v2 = 0; ampAvg = 1.5; yawS = 0; yawBuf = [];
+      lastStepAt = performance.now();
+      window.addEventListener('devicemotion', handleMotion);
+      elapsedTimer = setInterval(render, 500);
+      getWakeLock(); startElevation();
+      log(m === 'record' ? 'Recording started. Walk normally with the phone in your hand.' : 'Retrace started. Face back the way you came and follow the directions.');
+      render();
+    } catch (err) { log(`Could not start: ${err.message}`); }
+  }
+  function stop() {
+    const was = mode;
+    flushPending(); // commit any buffered steps before they are lost
+    active = false; cueKey = '';
+    try { if (window.speechSynthesis) speechSynthesis.cancel(); } catch (_) {}
+    window.removeEventListener('devicemotion', handleMotion);
+    clearInterval(elapsedTimer); elapsedTimer = null; stopElevation();
+    if (wakeLock) { wakeLock.release().catch(()=>{}); wakeLock = null; }
+    if (was === 'record') { route = clean(route); save(); if (routeOk()) log(`Route saved (${stats()}).`); }
+    $('motionState').textContent = 'Stopped'; $('turnState').textContent = 'Idle';
+    log('Tracking stopped.'); render();
+  }
+  function reset() {
+    if (active) stop();
+    resetLive();
+    $('log').innerHTML = ''; $('accel').textContent = '—'; $('motionState').textContent = 'Waiting';
+    log('Counters reset. Saved route kept.'); render();
+  }
+  $('startBtn').addEventListener('click', () => start('record'));
+  $('retraceBtn').addEventListener('click', () => start('retrace'));
+  $('stopBtn').addEventListener('click', stop);
+  $('manualStep').addEventListener('click', () => addStep(performance.now(), true));
+  $('manualLeft').addEventListener('click', () => addTurn('left', true));
+  $('manualRight').addEventListener('click', () => addTurn('right', true));
+  $('undoTurn').addEventListener('click', undoTurn);
+  $('nextBtn').addEventListener('click', () => { if (active && mode === 'retrace' && ri < rt.length) { log('Marked done manually'); setIdx(ri+1); } });
+  $('prevBtn').addEventListener('click', () => { if (active && mode === 'retrace') { log('Went back one instruction'); setIdx(ri-1); } });
+  $('resetBtn').addEventListener('click', reset);
+  $('restoreBtn').addEventListener('click', () => {
+    if (active || !prevRoute) return;
+    route = prevRoute.map(x => ({...x})); prevRoute = null; rt = []; save();
+    log(`Previous route restored (${stats()}).`); render();
+  });
+  const cueLbl = () => {
+    $('cueBtn').textContent = `Vibration: ${cues ? 'on' : 'off'}`; $('cueBtn').setAttribute('aria-pressed', cues);
+    $('voiceBtn').textContent = `Voice: ${voice ? 'on' : 'off'}`; $('voiceBtn').setAttribute('aria-pressed', voice);
+  };
+  $('cueBtn').addEventListener('click', () => {
+    cues = !cues; try { localStorage.setItem('walksenseCues', cues ? '1' : '0'); } catch (_) {}
+    if (cues && navigator.vibrate) { try { navigator.vibrate(80); } catch (_) {} }
+    cueLbl(); log(`Vibration cues ${cues ? 'on' : 'off'}.`);
+  });
+  $('voiceBtn').addEventListener('click', () => {
+    voice = !voice; try { localStorage.setItem('walksenseVoice', voice ? '1' : '0'); } catch (_) {}
+    // Speaking here also primes speech synthesis, which needs a user gesture on iOS.
+    if (voice) speak('Voice guidance on'); else try { if (window.speechSynthesis) speechSynthesis.cancel(); } catch (_) {}
+    cueLbl(); log(`Voice guidance ${voice ? 'on' : 'off'}.`);
+  });
+  $('swapBtn').addEventListener('click', () => {
+    flip = !flip; try { localStorage.setItem('walksenseFlip', flip ? '1' : '0'); } catch (_) {}
+    seg = null; log(`Left/right swapped (${flip ? 'inverted' : 'default'}). Record a new route to apply it.`);
+  });
+  $('strideIn').addEventListener('change', e => { stride = clamp(parseFloat(e.target.value) || 0.7, 0.3, 1.4); e.target.value = stride; render(); });
+  // ---- Save / load ----
+  const showText = msg => { const t = $('pathText'); t.value = serialize(); t.focus(); t.select(); log(msg); };
+  function anchorDownload() {
+    const url = URL.createObjectURL(new Blob([serialize()], {type:'application/json'}));
+    const a = document.createElement('a'); a.href = url; a.download = 'walksense-route.json';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+    $('pathText').value = serialize();
+    log('File download started. If nothing downloaded, copy the route text under Saved route instead.');
+  }
+  $('saveFileBtn').addEventListener('click', async () => {
+    let d = null;
+    try { d = window.claude && typeof window.claude.use === 'function' ? await window.claude.use('downloads') : null; } catch (_) {}
+    if (d) {
+      try { await d.save({filename:'walksense-route.json', data:serialize()}); log('Route file ready.'); return; }
+      catch (err) { if (err && err.code === 'declined') { log('Save cancelled.'); return; } }
+    }
+    try { anchorDownload(); } catch (_) { showText('Download failed. The route text is shown under Saved route instead.'); }
+  });
+  $('copyTxtBtn').addEventListener('click', async () => {
+    const t = $('pathText'); t.value = serialize(); t.focus(); t.select();
+    let ok = false;
+    try { await navigator.clipboard.writeText(t.value); ok = true; } catch (_) { try { ok = document.execCommand('copy'); } catch (_) {} }
+    log(ok ? 'Route text copied.' : 'Select the text under Saved route and copy it manually.');
+  });
+  function loaded() { save(); log(`Loaded route: ${stats()}.`); render(); }
+  $('loadTxtBtn').addEventListener('click', () => {
+    if (active) return;
+    try { loadStr($('pathText').value.trim()); loaded(); } catch (err) { log('Load failed: ' + (err.message || 'invalid text')); }
+  });
+  $('loadFile').addEventListener('change', e => {
+    const f = e.target.files[0]; e.target.value = ''; if (!f || active) return;
+    const rd = new FileReader();
+    rd.onload = () => { try { loadStr(String(rd.result)); loaded(); } catch (err) { log('Load failed: ' + err.message); } };
+    rd.onerror = () => log('Could not read that file.');
+    rd.readAsText(f);
+  });
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden && active) log('Page hidden: sensor readings may pause. Keep the screen on while walking.');
+    else if (!document.hidden && active) getWakeLock();
+  });
+  const TUNE = [['warnPct','“Turn soon” warning: % of stretch left',1], ['warnMin','…or at least this many steps',1], ['earlyPct','Accept a turn when this % of stretch is left',1], ['earlyMin','…or at least this many steps',1], ['turnDeg','Minimum turn angle (°)',1], ['startRate','Turn start rate (°/s)',1], ['keepRate','Turn keep rate (°/s)',1], ['holdMs','Turn hold time (ms)',50], ['cooldown','Turn cooldown (ms)',50], ['warmup','Walking warm-up (steps)',1], ['stepThr','Step peak threshold (m/s²)',0.1]];
+  const tuneSave = () => { try { localStorage.setItem('walksenseTune', JSON.stringify(T)); } catch (_) {} };
+  const tuneFill = () => TUNE.forEach(([k]) => { $('tn_'+k).value = T[k]; });
+  $('tuneBox').innerHTML = TUNE.map(([k, l, st]) => `<div class="kv"><span>${l}</span><input type="number" id="tn_${k}" step="${st}" min="0"></div>`).join('');
+  TUNE.forEach(([k]) => $('tn_'+k).addEventListener('change', e => { const n = parseFloat(e.target.value); if (Number.isFinite(n) && n >= 0) { T[k] = n; applyTune(); tuneSave(); render(); log(`Tuning: ${k} = ${n}`); } else e.target.value = T[k]; }));
+  $('tuneReset').addEventListener('click', () => { T = {...DEF}; applyTune(); tuneSave(); tuneFill(); render(); log('Tuning reset to defaults.'); });
+  tuneFill();
+  cueLbl();
+  $('strideIn').value = stride;
+  render();
+})();
+</script>
+</body>
+</html>

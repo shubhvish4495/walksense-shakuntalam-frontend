@@ -1,0 +1,5 @@
+# Keep the admin and lab pages out of search engines.
+/admin*
+  X-Robots-Tag: noindex, nofollow
+/lab*
+  X-Robots-Tag: noindex, nofollow

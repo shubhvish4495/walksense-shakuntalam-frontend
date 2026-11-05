@@ -1,0 +1,459 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="robots" content="noindex, nofollow">
+<title>WalkSense · Admin</title>
+<style>
+  :root { --lift:60px; --paper:#f3f0e8; --card:#faf8f3; --ink:#1c1b18; --mute:#74705f; --rule:#cfc9b8; --accent:#d8401f; --hi:#ffe14d; --ok:#2f7d4f;
+          --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif; --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+  @media (prefers-color-scheme:dark) { :root { --paper:#151410; --card:#1c1b16; --ink:#ece8da; --mute:#9a9582; --rule:#38352b; --accent:#ff6a45; --hi:#5c4d00; --ok:#5cc58a; } }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  [hidden] { display:none !important; }
+  body { margin:0; background:var(--paper); color:var(--ink); font:16px/1.5 "Helvetica Neue",Arial,sans-serif; }
+  main { max-width:560px; margin:0 auto; padding:max(20px,env(safe-area-inset-top)) 18px calc(96px + var(--lift) + env(safe-area-inset-bottom)); }
+  body.nodock main { padding-bottom:calc(40px + env(safe-area-inset-bottom)); }
+  .top { display:flex; justify-content:space-between; align-items:baseline; border-bottom:2px solid var(--ink); padding-bottom:10px; }
+  .brand { font:700 22px/1 var(--serif); letter-spacing:-.3px; }
+  .brand i { font-style:normal; color:var(--accent); }
+  .brand small { font:600 11px var(--mono); text-transform:uppercase; letter-spacing:1px; color:var(--mute); margin-left:8px; }
+  .status { font:12px var(--mono); text-transform:uppercase; letter-spacing:.8px; color:var(--mute); display:flex; align-items:center; gap:7px; }
+  .dot { width:9px; height:9px; background:var(--rule); } .dot.ok { background:var(--ok); } .dot.bad { background:var(--accent); }
+  .dot.live { background:var(--accent); animation:blink 1.2s steps(2,jump-none) infinite; }
+  @keyframes blink { 50% { opacity:.25; } }
+  .lbl { font:11px var(--mono); text-transform:uppercase; letter-spacing:1px; color:var(--mute); }
+  .msg { font:12px/1.4 var(--mono); padding:9px 12px; margin-top:14px; border-left:3px solid var(--ink); background:var(--card); }
+  .msg.err { border-color:var(--accent); color:var(--accent); }
+  .msg:empty { display:none; }
+  .note { font-size:13px; color:var(--mute); margin:16px 0 0; padding-left:12px; border-left:3px solid var(--accent); }
+  h2 { font:400 30px/1.1 var(--serif); margin:18px 0 4px; letter-spacing:-.5px; }
+  p.small, .small { font-size:13px; color:var(--mute); margin:0 0 8px; }
+  /* list view */
+  .prog { display:grid; grid-template-columns:1fr auto; align-items:end; padding:20px 0 14px; border-bottom:1px solid var(--rule); }
+  .big { font:400 64px/.9 var(--serif); letter-spacing:-2px; font-variant-numeric:tabular-nums; }
+  .big i { font:400 28px var(--serif); font-style:normal; color:var(--mute); letter-spacing:0; }
+  .bar { height:6px; background:var(--rule); margin-top:12px; } .fill { height:100%; width:0; background:var(--ok); transition:width .2s; }
+  .segs { margin-top:18px; border:2px solid var(--ink); background:var(--card); }
+  .seg { display:flex; gap:14px; align-items:center; padding:12px 14px; border-bottom:1px solid var(--rule); color:inherit; text-decoration:none; }
+  .seg:last-child { border-bottom:0; } .seg:active { background:var(--hi); }
+  .seg.gate { background:var(--ink); color:var(--paper); }
+  .code { font:400 28px/1 var(--serif); width:32px; text-align:center; }
+  .grow { flex:1; min-width:0; }
+  .grow b { display:block; font-weight:600; font-size:15px; }
+  .grow small { display:block; font:12px var(--mono); opacity:.7; }
+  .badge { font:600 10px var(--mono); text-transform:uppercase; letter-spacing:.8px; padding:4px 7px; border:1px solid currentColor; white-space:nowrap; }
+  .badge.ok { color:var(--ok); } .badge.draft { color:var(--accent); } .badge.miss { color:var(--mute); }
+  .seg.gate .badge { color:var(--paper); }
+  /* segment view */
+  .back { border:0; padding:14px 0 0; text-transform:none; letter-spacing:0; font:600 13px var(--mono); color:var(--mute); }
+  .back:active { background:none; color:var(--ink); }
+  .how { font-size:14px; margin:10px 0 0; padding:12px 14px; background:var(--card); border:1px solid var(--rule); }
+  .kv { display:flex; justify-content:space-between; gap:12px; padding:8px 0; border-bottom:1px dotted var(--rule); font-size:14px; align-items:center; }
+  .kv span:first-child { color:var(--mute); } .kv strong { font:500 13px var(--mono); text-align:right; }
+  .hero { display:grid; grid-template-columns:1fr auto; align-items:end; gap:12px; padding:18px 0 14px; border-bottom:1px solid var(--rule); }
+  .steps { font:400 clamp(72px,22vw,108px)/.85 var(--serif); letter-spacing:-4px; font-variant-numeric:tabular-nums; margin-top:8px; }
+  .state { font:13px var(--mono); text-align:right; padding-bottom:6px; }
+  .route { margin-top:18px; border:2px solid var(--ink); background:var(--card); }
+  .route .head { display:flex; justify-content:space-between; align-items:center; padding:10px 14px; background:var(--ink); color:var(--paper); font:600 12px var(--mono); text-transform:uppercase; letter-spacing:1px; }
+  .list { max-height:340px; overflow:auto; }
+  .list:empty::after { content:"No steps yet. Tap Record and walk, or add rows by hand below."; display:block; padding:16px; font:12px var(--mono); color:var(--mute); }
+  .it { display:flex; gap:10px; align-items:center; padding:8px 14px; border-bottom:1px solid var(--rule); font-size:14px; min-height:48px; }
+  .it.cur { background:var(--hi); font-weight:600; }
+  .ii { font:22px/1 var(--serif); width:30px; text-align:center; color:var(--accent); flex:none; }
+  button.ii { border:1px solid var(--rule); padding:6px 0; height:36px; }
+  .mini { padding:6px 0; width:34px; height:34px; flex:none; font-size:14px; letter-spacing:0; border-color:var(--rule); }
+  .addrow { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; padding:12px 14px; }
+  .row { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-top:14px; }
+  button, .btn { font:600 13px var(--mono); text-transform:uppercase; letter-spacing:.6px; background:transparent; color:var(--ink); border:1px solid var(--ink); border-radius:2px; padding:11px 6px; cursor:pointer; text-align:center; }
+  button:active, .btn:active { background:var(--ink); color:var(--paper); }
+  button:disabled { opacity:.35; cursor:not-allowed; }
+  button.danger { color:var(--accent); border-color:var(--accent); }
+  input[type=number], input[type=url] { font:500 14px var(--mono); background:var(--paper); color:var(--ink); border:1px solid var(--rule); padding:7px; }
+  input[type=number] { width:84px; }
+  input[type=url] { width:100%; }
+  .sec { margin-top:26px; border-top:2px solid var(--ink); }
+  details { border-bottom:1px solid var(--rule); }
+  summary { list-style:none; cursor:pointer; padding:15px 0; display:flex; justify-content:space-between; font:600 12px var(--mono); text-transform:uppercase; letter-spacing:1px; }
+  summary::-webkit-details-marker { display:none; }
+  summary::after { content:"+"; } details[open] summary::after { content:"–"; }
+  .body { padding-bottom:16px; }
+  .log { max-height:160px; overflow:auto; font:12px/1.4 var(--mono); color:var(--mute); }
+  .log p { margin:0; padding:6px 0; border-bottom:1px dotted var(--rule); }
+  a { color:var(--accent); }
+  .dock { position:fixed; left:0; right:0; bottom:0; background:var(--paper); border-top:2px solid var(--ink); padding:12px 18px calc(12px + var(--lift) + env(safe-area-inset-bottom)); }
+  .dock div { max-width:560px; margin:0 auto; display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
+  .dock button { padding:16px 4px; font-size:13px; }
+  #recBtn { background:var(--ink); color:var(--paper); }
+  #saveBtn { background:var(--ok); color:#fff; border-color:var(--ok); }
+  #recBtn:disabled, #saveBtn:disabled { background:var(--rule); color:var(--mute); border-color:var(--rule); opacity:1; }
+</style>
+</head>
+<body class="nodock">
+<main>
+  <div class="top">
+    <div class="brand">Walk<i>/</i>Sense<small>Admin</small></div>
+    <div class="status"><span class="dot" id="apiDot"></span><span id="apiText">Connecting…</span></div>
+  </div>
+  <div class="msg" id="msg" role="status" aria-live="polite"></div>
+
+  <!-- ===== List of all segments ===== -->
+  <section id="listView">
+    <div class="prog">
+      <div><div class="lbl" id="building">Society</div><div class="big"><span id="done">0</span><i> / 15</i></div><div class="lbl">segments recorded</div></div>
+      <button id="reloadBtn" style="padding:9px 12px">Reload</button>
+    </div>
+    <div class="bar"><div class="fill" id="progFill"></div></div>
+    <p class="note" id="gateWarn" hidden>Record <b>Gate → Lift</b> first. No flat can be navigated until it is saved.</p>
+    <div class="segs" id="segList"></div>
+    <p class="note">A delivery route is <b>Gate → Lift</b>, then the lift, then <b>Lift → Flat</b> for that letter. Every floor has the same layout, so each flat letter is recorded once.</p>
+
+    <div class="sec">
+      <details id="settings">
+        <summary>Settings</summary>
+        <div class="body">
+          <p class="small">API server address. Must be HTTPS when this page is served over HTTPS.</p>
+          <input type="url" id="apiIn" placeholder="https://api.example.com" autocomplete="off" spellcheck="false">
+          <div class="row" style="grid-template-columns:1fr 1fr"><button id="apiSave">Connect</button><button id="apiReset">Use default</button></div>
+          <div class="kv" style="margin-top:14px"><span>Recorder stride (m)</span><span><input type="number" id="strideIn" min="0.3" max="1.4" step="0.05"> <button id="strideSave" style="padding:7px 10px">Save</button></span></div>
+          <p class="small" style="margin-top:8px">Stride of the person who records the routes. Agents' step counts are scaled from it, so all segments should be walked by someone with about this stride.</p>
+          <div class="row" style="grid-template-columns:1fr 1fr"><button id="exportBtn">Export backup</button><label class="btn" for="importFile">Restore backup</label></div>
+          <input type="file" id="importFile" accept=".json,application/json" hidden>
+          <p class="small" style="margin-top:12px">Step and turn thresholds are shared with the <a href="lab.html">Lab page</a>. Tune them there on the same phone.</p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <!-- ===== One segment: record / edit / save ===== -->
+  <section id="segView" hidden>
+    <button class="back" id="backBtn">← All segments</button>
+    <h2 id="segTitle"></h2>
+    <div class="how" id="segHow"></div>
+    <div class="kv" style="margin-top:10px"><span>On server</span><strong id="segServer">—</strong></div>
+    <div class="kv" id="fullRow"><span>Agents will get</span><strong id="segFull">—</strong></div>
+
+    <section class="hero">
+      <div><div class="lbl">Steps this recording</div><div class="steps" id="steps">0</div></div>
+      <div class="state"><div class="lbl">Status</div><span id="recState">Idle</span><div id="turnState" class="lbl" style="margin-top:4px">&nbsp;</div></div>
+    </section>
+
+    <div class="row">
+      <button id="mStep">+ Step</button><button id="mLeft">+ Left</button><button id="mRight">+ Right</button><button id="mUndo">Undo turn</button>
+    </div>
+
+    <div class="route">
+      <div class="head"><span>Route</span><span id="routeStats"></span></div>
+      <div class="list" id="routeList"></div>
+      <div class="addrow" id="addRow"><button data-add="s">+ Walk</button><button data-add="L">+ Left</button><button data-add="R">+ Right</button></div>
+    </div>
+    <p class="small" style="margin-top:8px" id="editHint">Tap a row's icon to change it between walk, left and right. ＋ inserts a turn below, ✕ deletes. Turns at the very end are dropped on save.</p>
+
+    <div class="row" style="grid-template-columns:1fr 1fr">
+      <button id="discardBtn">Discard changes</button><button id="deleteBtn" class="danger">Delete from server</button>
+    </div>
+
+    <div class="sec">
+      <details>
+        <summary>Activity log</summary>
+        <div class="body"><div class="log" id="log"></div></div>
+      </details>
+    </div>
+  </section>
+</main>
+<div class="dock" id="dock" hidden><div><button id="recBtn">Record</button><button id="stopBtn" disabled>Stop</button><button id="saveBtn" disabled>Save</button></div></div>
+
+<script src="js/api.js"></script>
+<script src="js/sensors.js"></script>
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const API = window.WalkAPI;
+  const LETTERS = 'ABCDEFGHIJKLMN'.split(''), SEGS = ['gate', ...LETTERS];
+  const ICON = {s:'↑', L:'↰', R:'↱'};
+  const DKEY = 'walksenseAdminDrafts', CKEY = 'walksenseAdminCache';
+  let doc = null, online = false, busy = false;
+  let cur = null, ed = [], recording = false, recSteps = 0;
+  // Unsaved edits per segment, in wire format, so a reload or a dropped connection loses nothing.
+  let drafts = {};
+  try { drafts = JSON.parse(localStorage.getItem(DKEY) || '{}') || {}; } catch (_) {}
+  try { doc = JSON.parse(localStorage.getItem(CKEY) || 'null'); } catch (_) {}
+
+  // ---- helpers ----
+  const segName = s => s === 'gate' ? 'Gate → Lift' : `Lift → Flat ${s}`;
+  const word = d => d === 'L' ? 'left' : 'right';
+  // Keeps whatever the editor holds, just type-safe (used for drafts read back from storage).
+  const sane = r => (r || []).map(a => a[0] === 's' ? {t:'s', n:Math.max(0, Math.round(+a[1]) || 0)} : (a[1] === 'L' || a[1] === 'R') ? {t:'t', d:a[1]} : null).filter(Boolean);
+  // What gets saved: walks of 1+ steps (adjacent ones merged), no trailing turns.
+  function clean(r) {
+    const o = [];
+    for (const x of r) {
+      if (x.t === 't') { o.push({t:'t', d:x.d}); continue; }
+      const n = Math.round(+x.n); if (!(n >= 1)) continue;
+      const l = o[o.length-1];
+      if (l && l.t === 's') l.n = Math.min(10000, l.n + n); else o.push({t:'s', n:Math.min(10000, n)});
+    }
+    while (o.length && o[o.length-1].t === 't') o.pop();
+    return o;
+  }
+  const serverRoute = s => !doc ? [] : API.fromWire(s === 'gate' ? doc.gate : (doc.flats || {})[s]);
+  const recorded = s => serverRoute(s).length > 0;
+  const same = (a, b) => JSON.stringify(API.toWire(a)) === JSON.stringify(API.toWire(b));
+  const stats = r => { const c = clean(r); return c.length ? `${c.reduce((n, x) => n + (x.t === 's' ? x.n : 0), 0)} steps · ${c.filter(x => x.t === 't').length} turns` : 'empty'; };
+  const dirty = s => !!drafts[s];
+  function msg(text, err) { const m = $('msg'); m.textContent = text || ''; m.className = 'msg' + (err ? ' err' : ''); }
+  function log(text) {
+    const time = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+    const p = document.createElement('p'); p.textContent = `${time} · ${text}`;
+    $('log').prepend(p);
+    while ($('log').children.length > 40) $('log').lastElementChild.remove();
+  }
+  function storeDrafts() { try { localStorage.setItem(DKEY, JSON.stringify(drafts)); } catch (_) {} }
+  // The editor is a draft only while it differs from the server copy.
+  function syncDraft() {
+    if (!cur) return;
+    if (!recording && same(clean(ed), serverRoute(cur)) && same(ed, clean(ed))) delete drafts[cur];
+    else drafts[cur] = API.toWire(ed);
+    storeDrafts();
+  }
+
+  // ---- server ----
+  function setOnline(ok, text) {
+    online = ok;
+    $('apiDot').className = 'dot ' + (ok ? 'ok' : 'bad');
+    $('apiText').textContent = text || (ok ? 'Connected' : 'Offline');
+  }
+  function gotDoc(d) {
+    doc = d;
+    try { localStorage.setItem(CKEY, JSON.stringify(d)); } catch (_) {}
+    // Drafts that now match the server are no longer drafts.
+    for (const s of Object.keys(drafts)) if (s !== cur && same(sane(drafts[s]), serverRoute(s))) delete drafts[s];
+    storeDrafts();
+    if (cur && !recording && !dirty(cur)) ed = serverRoute(cur);
+  }
+  async function load() {
+    if (!API.base()) { setOnline(false, 'No API set'); msg('Set the API server address under Settings.', true); $('settings').open = true; render(); return; }
+    $('apiText').textContent = 'Connecting…';
+    try { gotDoc(await API.getFlats()); setOnline(true); if (!busy) msg(''); }
+    catch (err) {
+      setOnline(false); $('settings').open = true;
+      msg(`${err.message} ${doc ? 'Showing the last loaded copy.' : ''} Check the API address under Settings. Recordings are kept on this phone until you can save.`, true);
+    }
+    render();
+  }
+
+  // ---- recording ----
+  const sensors = WalkSensors.create({
+    onStep() { if (!recording) return; ed[ed.length-1].n++; recSteps++; if (recSteps % 10 === 0) syncDraft(); renderSeg(); },
+    onTurn(d, deg) { addTurn(d, false, deg); },
+    onTurning(deg) { $('turnState').innerHTML = deg == null ? '&nbsp;' : `Turning… ${deg}°`; },
+    onIgnored: log,
+  });
+  function addTurn(d, manual, deg) {
+    if (!recording) return;
+    const prev = ed[ed.length-2], l = ed[ed.length-1];
+    if (!manual && l.n === 0 && prev && prev.t === 't' && prev.d === d) { log('Same-direction turn merged into the previous one'); return; }
+    if (manual) sensors.noteTurn();
+    ed.push({t:'t', d}, {t:'s', n:0}); syncDraft();
+    log(manual ? `Manual ${word(d)} turn added` : `${word(d)} turn detected (~${deg}°)`);
+    if (navigator.vibrate) try { navigator.vibrate(60); } catch (_) {}
+    renderSeg();
+  }
+  function undoTurn() {
+    if (!recording) return;
+    let i = -1; ed.forEach((x, k) => { if (x.t === 't') i = k; });
+    if (i < 1) { log('No turns to undo.'); return; }
+    const d = ed[i].d;
+    // A recording always starts with a walk, so the turn sits between two walks.
+    ed.splice(i-1, 3, {t:'s', n:ed[i-1].n + ed[i+1].n});
+    sensors.resetTurn(); syncDraft();
+    log(`Removed ${word(d)} turn`); renderSeg();
+  }
+  async function startRec() {
+    if (recording || !cur) return;
+    if (clean(ed).length && !confirm(`Replace the current ${segName(cur)} route (${stats(ed)}) with a new recording?`)) return;
+    try {
+      await sensors.start();
+      ed = [{t:'s', n:0}]; recSteps = 0; recording = true; syncDraft();
+      log('Recording started. Walk normally with the phone in your hand.');
+      msg(`Recording ${segName(cur)}. Tap Stop at the end.`);
+    } catch (err) { msg(`Could not start: ${err.message}`, true); }
+    render();
+  }
+  function stopRec() {
+    if (!recording) return;
+    sensors.stop(); // flushes buffered steps into ed, so it runs before recording = false
+    recording = false; ed = clean(ed); syncDraft();
+    log(`Recording stopped (${stats(ed)}).`);
+    msg(ed.length ? `Recorded ${stats(ed)}. Check it, then tap Save.` : 'Nothing was recorded.', !ed.length);
+    render();
+  }
+
+  // ---- saving ----
+  async function saveSeg() {
+    if (!cur || recording || busy) return;
+    const r = clean(ed);
+    if (!r.length) { msg('The route is empty. Use Delete from server to clear a segment.', true); return; }
+    busy = true; render(); msg('Saving…');
+    try {
+      gotDoc(await API.putSegment(cur, r)); setOnline(true);
+      delete drafts[cur]; storeDrafts(); ed = serverRoute(cur);
+      msg(`${segName(cur)} saved (${stats(ed)}). Agents get it on their next load.`); log('Saved to server.');
+    } catch (err) { msg(`Not saved: ${err.message} The recording is kept on this phone.`, true); if (/reach/.test(err.message)) setOnline(false); }
+    busy = false; render();
+  }
+  async function deleteSeg() {
+    if (!cur || recording || busy || !recorded(cur)) return;
+    if (!confirm(`Delete the saved ${segName(cur)} route from the server? Agents will no longer be able to navigate ${cur === 'gate' ? 'to any flat' : `to flat ${cur}`}.`)) return;
+    busy = true; render();
+    try {
+      gotDoc(await API.deleteSegment(cur)); setOnline(true);
+      delete drafts[cur]; storeDrafts(); ed = [];
+      msg(`${segName(cur)} deleted from the server.`); log('Deleted from server.');
+    } catch (err) { msg(`Not deleted: ${err.message}`, true); }
+    busy = false; render();
+  }
+  function discard() {
+    if (!cur || recording || !dirty(cur)) return;
+    if (!confirm('Throw away your unsaved changes and go back to the server copy?')) return;
+    delete drafts[cur]; storeDrafts(); ed = serverRoute(cur); msg('Changes discarded.'); render();
+  }
+
+  // ---- manual editing (when not recording) ----
+  function edit(fn, keepList) { if (recording) return; fn(); syncDraft(); renderSeg(keepList); }
+  $('routeList').addEventListener('click', e => {
+    const b = e.target.closest('button[data-act]'); if (!b) return;
+    const i = +b.closest('[data-i]').dataset.i, x = ed[i];
+    edit(() => {
+      if (b.dataset.act === 'kind') ed[i] = x.t === 's' ? {t:'t', d:'L'} : x.d === 'L' ? {t:'t', d:'R'} : {t:'s', n:1};
+      else if (b.dataset.act === 'ins') ed.splice(i+1, 0, {t:'t', d:'L'});
+      else if (b.dataset.act === 'del') ed.splice(i, 1);
+    });
+  });
+  $('routeList').addEventListener('change', e => {
+    const inp = e.target.closest('input[data-i]'); if (!inp) return;
+    const n = Math.round(+inp.value);
+    // Keep the list as is so the input isn't replaced while it still has focus.
+    edit(() => { ed[+inp.dataset.i].n = Number.isFinite(n) ? Math.max(0, Math.min(10000, n)) : 0; }, true);
+  });
+  $('addRow').addEventListener('click', e => {
+    const k = e.target.closest('button[data-add]'); if (!k) return;
+    edit(() => ed.push(k.dataset.add === 's' ? {t:'s', n:10} : {t:'t', d:k.dataset.add}));
+  });
+
+  // ---- views ----
+  function renderList() {
+    const done = SEGS.filter(recorded).length;
+    $('building').textContent = doc ? doc.building : 'Society';
+    $('done').textContent = done;
+    $('progFill').style.width = `${Math.round(done/SEGS.length*100)}%`;
+    $('gateWarn').hidden = !doc || recorded('gate');
+    $('segList').innerHTML = SEGS.map(s => {
+      const on = recorded(s), d = dirty(s);
+      const sub = d ? `Unsaved: ${stats(sane(drafts[s]))}` : on ? stats(serverRoute(s)) : 'Not recorded';
+      const badge = d ? '<span class="badge draft">Unsaved</span>' : on ? '<span class="badge ok">Saved</span>' : '<span class="badge miss">Missing</span>';
+      return `<a class="seg${s === 'gate' ? ' gate' : ''}" href="#/${s}"><span class="code">${s === 'gate' ? 'G' : s}</span><span class="grow"><b>${segName(s)}</b><small>${sub}</small></span>${badge}</a>`;
+    }).join('');
+    if (doc && document.activeElement !== $('strideIn')) $('strideIn').value = doc.stride;
+    if (document.activeElement !== $('apiIn')) $('apiIn').value = API.base();
+  }
+  function renderSeg(keepList) {
+    const s = cur, onServer = serverRoute(s), d = dirty(s);
+    $('segTitle').textContent = segName(s);
+    $('segHow').innerHTML = s === 'gate'
+      ? 'Stand just inside the <b>society gate</b>, facing in. Tap <b>Record</b> and walk to the <b>lift door</b> at a normal pace. Tap <b>Stop</b> facing the lift door. Don’t walk into the lift.'
+      : `Come out of the lift on any floor and stand at the <b>lift door with your back to the lift</b>. Tap <b>Record</b> and walk to the door of <b>flat ${s}</b>. Tap <b>Stop</b> at the door.`;
+    $('segServer').textContent = onServer.length ? stats(onServer) + (d ? ' · you have unsaved changes' : '') : 'Not recorded';
+    $('fullRow').hidden = s === 'gate';
+    if (s !== 'gate') {
+      const g = serverRoute('gate');
+      $('segFull').textContent = !g.length ? 'Nothing yet: Gate → Lift is missing' : !onServer.length ? 'Nothing yet: this leg is not saved' : `Gate (${stats(g)}) → lift → ${stats(onServer)}`;
+    }
+    $('steps').textContent = recSteps;
+    $('recState').textContent = recording ? (sensors.walking ? 'Recording · walking' : 'Recording') : busy ? 'Saving…' : d ? 'Unsaved changes' : 'Idle';
+    $('routeStats').textContent = stats(ed);
+    ['mStep', 'mLeft', 'mRight'].forEach(id => { $(id).disabled = !recording; });
+    $('mUndo').disabled = !(recording && ed.some(x => x.t === 't'));
+    $('addRow').hidden = $('editHint').hidden = recording;
+    $('discardBtn').disabled = recording || busy || !d;
+    $('deleteBtn').disabled = recording || busy || !onServer.length || !online;
+    $('recBtn').disabled = recording || busy;
+    $('stopBtn').disabled = !recording;
+    $('saveBtn').disabled = recording || busy || !online || !clean(ed).length || same(clean(ed), onServer);
+    $('saveBtn').textContent = busy ? 'Saving…' : 'Save';
+    const list = $('routeList');
+    if (recording) {
+      list.innerHTML = ed.map((x, i) => `<div class="it${i === ed.length-1 ? ' cur' : ''}"><span class="ii">${ICON[x.t === 's' ? 's' : x.d]}</span><span class="grow">${x.t === 's' ? `Walk ${x.n} steps` : `Turn ${word(x.d)}`}</span></div>`).join('');
+      list.scrollTop = list.scrollHeight;
+    } else if (!keepList) {
+      list.innerHTML = ed.map((x, i) => `<div class="it" data-i="${i}"><button class="ii" data-act="kind" aria-label="Change type">${ICON[x.t === 's' ? 's' : x.d]}</button>`
+        + `<span class="grow">${x.t === 's' ? `Walk <input type="number" data-i="${i}" min="1" max="10000" value="${x.n}" aria-label="Steps"> steps` : `Turn ${word(x.d)}`}</span>`
+        + `<button class="mini" data-act="ins" aria-label="Insert a turn below">＋</button><button class="mini" data-act="del" aria-label="Delete">✕</button></div>`).join('');
+    }
+  }
+  function render() {
+    const seg = !!cur;
+    $('listView').hidden = seg; $('segView').hidden = !seg; $('dock').hidden = !seg;
+    document.body.classList.toggle('nodock', !seg);
+    $('apiDot').classList.toggle('live', recording);
+    if (seg) renderSeg(); else renderList();
+  }
+
+  // ---- routing: #/ (list) and #/gate, #/A … #/N (one segment) ----
+  function route() {
+    const m = location.hash.match(/^#\/(gate|[A-Na-n])$/);
+    const s = m ? (m[1].length === 1 ? m[1].toUpperCase() : 'gate') : null;
+    if (recording && s !== cur) { history.replaceState(null, '', `#/${cur}`); msg('Stop the recording before leaving this segment.', true); return; }
+    if (s !== cur) { cur = s; recSteps = 0; ed = s ? (drafts[s] ? sane(drafts[s]) : serverRoute(s)) : []; msg(''); window.scrollTo(0, 0); }
+    render();
+  }
+  window.addEventListener('hashchange', route);
+  window.addEventListener('beforeunload', e => { if (recording) { e.preventDefault(); e.returnValue = ''; } });
+
+  // ---- controls ----
+  $('backBtn').addEventListener('click', () => { location.hash = '#/'; });
+  $('recBtn').addEventListener('click', startRec);
+  $('stopBtn').addEventListener('click', stopRec);
+  $('saveBtn').addEventListener('click', saveSeg);
+  $('discardBtn').addEventListener('click', discard);
+  $('deleteBtn').addEventListener('click', deleteSeg);
+  $('mStep').addEventListener('click', () => { if (recording) { ed[ed.length-1].n++; recSteps++; log('Manual step added'); renderSeg(); } });
+  $('mLeft').addEventListener('click', () => addTurn('L', true));
+  $('mRight').addEventListener('click', () => addTurn('R', true));
+  $('mUndo').addEventListener('click', undoTurn);
+  $('reloadBtn').addEventListener('click', load);
+  $('apiSave').addEventListener('click', () => { API.setBase($('apiIn').value); load(); });
+  $('apiReset').addEventListener('click', () => { API.setBase(''); $('apiIn').value = API.base(); load(); });
+  $('strideSave').addEventListener('click', async () => {
+    const v = +$('strideIn').value;
+    if (!doc || !online) { msg('Connect to the server first.', true); return; }
+    if (!(v >= 0.3 && v <= 1.4)) { msg('Stride must be between 0.3 and 1.4 m.', true); return; }
+    if (v === doc.stride) return;
+    try { gotDoc(await API.putFlats({...doc, stride:v})); msg(`Stride saved: ${v} m.`); } catch (err) { msg(`Not saved: ${err.message}`, true); }
+    render();
+  });
+  $('exportBtn').addEventListener('click', () => {
+    if (!doc) { msg('Nothing loaded to export.', true); return; }
+    const url = URL.createObjectURL(new Blob([JSON.stringify(doc, null, 2)], {type:'application/json'}));
+    const a = document.createElement('a'); a.href = url; a.download = `walksense-${doc.building}-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 10000);
+  });
+  $('importFile').addEventListener('change', e => {
+    const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+    const rd = new FileReader();
+    rd.onload = async () => {
+      let d; try { d = JSON.parse(String(rd.result)); } catch (_) { msg('That file is not valid JSON.', true); return; }
+      if (!confirm(`Replace ALL routes on the server with this backup (${d.building || 'unknown building'})? Segments not in the file are removed.`)) return;
+      try { gotDoc(await API.putFlats(d)); setOnline(true); msg('Backup restored.'); } catch (err) { msg(`Restore failed: ${err.message}`, true); }
+      render();
+    };
+    rd.readAsText(f);
+  });
+
+  route();
+  load();
+})();
+</script>
+</body>
+</html>
