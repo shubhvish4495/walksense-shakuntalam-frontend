@@ -8,6 +8,8 @@
 <style>
 :root{
   --surface:#ffffff; --field:#f3f6f4; --ink:#17251f; --muted:#5a6b62; --line:#cdd8d1;
+  /* Room for the "Powered by Netlify" badge pinned to the bottom of the screen (same as lab.html). */
+  --lift:60px;
   --accent:#1f6f54; --accent-ink:#ffffff; --soft:#e2efe8; --hi:#ffe9a8; --warn:#b3261e; --shadow:0 18px 50px rgba(8,20,14,.35);
   color-scheme: light;
 }
@@ -20,7 +22,7 @@
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{margin:0;min-height:100vh;color:var(--ink);font-family:"Hind","Noto Sans Devanagari",system-ui,sans-serif;font-size:17px;line-height:1.5;
   background:linear-gradient(180deg,#1d3a2c 0%,#14231c 60%)}
-.wrap{max-width:520px;margin:0 auto;padding:max(16px,env(safe-area-inset-top)) 16px calc(100px + env(safe-area-inset-bottom))}
+.wrap{max-width:520px;margin:0 auto;padding:max(16px,env(safe-area-inset-top)) 16px calc(100px + var(--lift) + env(safe-area-inset-bottom))}
 .top{display:flex;justify-content:space-between;align-items:center;gap:12px}
 .brand{color:#fff;font-family:"Baloo 2","Hind",sans-serif;font-weight:700;font-size:1.25rem;line-height:1.2}
 .brand a{display:block;font-family:"Hind",sans-serif;font-weight:500;font-size:.85rem;color:#cfe8dc}
@@ -54,7 +56,7 @@ details{margin-top:14px;color:#cfe8dc;font-size:.8rem}
 details summary{cursor:pointer}
 .log{max-height:160px;overflow:auto;font-family:ui-monospace,Menlo,monospace}
 .log p{margin:0;padding:4px 0;border-bottom:1px dotted rgba(255,255,255,.2)}
-.dock{position:fixed;left:0;right:0;bottom:0;background:var(--surface);box-shadow:0 -6px 24px rgba(0,0,0,.25);padding:12px 16px calc(12px + env(safe-area-inset-bottom))}
+.dock{position:fixed;left:0;right:0;bottom:0;background:var(--surface);box-shadow:0 -6px 24px rgba(0,0,0,.25);padding:12px 16px calc(12px + var(--lift) + env(safe-area-inset-bottom))}
 .dock div{max-width:520px;margin:0 auto}
 .dock button{width:100%;font:inherit;font-weight:700;font-size:1.1rem;border:0;border-radius:12px;padding:16px;background:var(--accent);color:var(--accent-ink);cursor:pointer}
 .dock button.stop{background:transparent;color:var(--warn);border:1.5px solid var(--warn)}
