@@ -2,7 +2,7 @@
 // Endpoints are described in backend/openapi.yaml.
 (() => {
   // Production API host. The pages are on Netlify (HTTPS), so this must be HTTPS too.
-  const DEFAULT_API = 'http://188.245.86.78:4495';
+  const DEFAULT_API = 'https://walksense.backend.splitriz.com';
   const KEY = 'walksenseApi';
   const local = location.protocol === 'file:' || /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
 
