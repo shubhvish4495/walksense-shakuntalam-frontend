@@ -113,23 +113,31 @@ select:focus-visible,button:focus-visible{outline:3px solid var(--accent);outlin
   </section>
 </div>
 
+<script src="js/api.js"></script>
 <script>
 const T = {
   en:{brand:"Shakuntalam",brandSub:"Apartment society",title:"Select your flat",sub:"Choose your floor, then your flat.",floor:"Floor",flat:"Flat",
       pickFloor:"Select floor",pickFlat:"Select flat",hintOff:"Choose a floor first.",hintOn:"Flats A to N are on this floor.",
       resLbl:"Your flat",none:"Not selected yet",confirm:"Start navigation",
-      ground:"Ground floor",ord:n=>{const s=["th","st","nd","rd"],v=n%100;return n+(s[(v-20)%10]||s[v]||s[0])+" floor"}},
+      ord:n=>{const s=["th","st","nd","rd"],v=n%100;return n+(s[(v-20)%10]||s[v]||s[0])+" floor"}},
   hi:{brand:"शकुन्तलम",brandSub:"अपार्टमेंट सोसाइटी",title:"अपना फ़्लैट चुनें",sub:"पहले मंज़िल चुनें, फिर फ़्लैट।",floor:"मंज़िल",flat:"फ़्लैट",
       pickFloor:"मंज़िल चुनें",pickFlat:"फ़्लैट चुनें",hintOff:"पहले मंज़िल चुनें।",hintOn:"इस मंज़िल पर फ़्लैट A से N तक हैं।",
       resLbl:"आपका फ़्लैट",none:"अभी चुना नहीं गया",confirm:"रास्ता दिखाएँ",
-      ground:"भूतल (ग्राउंड फ़्लोर)",ord:n=>n+"वीं मंज़िल"}
+      ord:n=>({1:"पहली",2:"दूसरी",3:"तीसरी",4:"चौथी",6:"छठी"}[n]||n+"वीं")+" मंज़िल"}
 };
-const FLOORS = 15, LETTERS = "ABCDEFGHIJKLMN".split("");
+const LETTERS = "ABCDEFGHIJKLMN".split("");
+// Floors with flats come from the backend (set under Settings in the admin page).
+// 1–9 is the fallback until it loads; the last loaded value is kept for offline use.
+// The cache key is shared with navigate.html, so opening this page also preloads the routes.
+const CKEY = "walksenseAgentCache";
+const okFloors = f => !!f && Number.isInteger(f.min) && Number.isInteger(f.max) && f.min >= 1 && f.max >= f.min && f.max <= 200;
+let FL = {min:1, max:9};
+try{ const d=JSON.parse(localStorage.getItem(CKEY)||"null"); if(d && okFloors(d.floors)) FL={min:d.floors.min, max:d.floors.max}; }catch(e){}
 let lang = "en";
 try{ const s=localStorage.getItem("lang"); if(s==="hi"||s==="en") lang=s; }catch(e){}
 const $ = id => document.getElementById(id);
 const floorEl=$("floor"), flatEl=$("flat");
-function floorLabel(f){ return f===0 ? T[lang].ground : T[lang].ord(f); }
+function floorLabel(f){ return T[lang].ord(f); }
 function render(){
   const t=T[lang];
   document.documentElement.lang = lang; document.title = t.title;
@@ -140,10 +148,10 @@ function render(){
   document.querySelectorAll(".lang button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.lang===lang)));
   const fv=floorEl.value, lv=flatEl.value;
   floorEl.innerHTML = `<option value="">${t.pickFloor}</option>` +
-    Array.from({length:FLOORS+1},(_,i)=>`<option value="${i}">${floorLabel(i)}</option>`).join("");
+    Array.from({length:FL.max-FL.min+1},(_,i)=>FL.min+i).map(f=>`<option value="${f}">${floorLabel(f)}</option>`).join("");
   floorEl.value=fv;
   flatEl.innerHTML = `<option value="">${t.pickFlat}</option>` + LETTERS.map(l=>`<option value="${l}">${l}</option>`).join("");
-  flatEl.value=lv;
+  flatEl.value = floorEl.value==="" ? "" : lv;
   update();
 }
 function code(){ return (floorEl.value===""||flatEl.value==="") ? "" : flatEl.value + floorEl.value; }
@@ -163,7 +171,17 @@ document.querySelectorAll(".lang button").forEach(b=>b.addEventListener("click",
   lang=b.dataset.lang; try{localStorage.setItem("lang",lang);}catch(e){}
   render();
 }));
+async function loadFloors(){
+  if(!window.WalkAPI) return;
+  try{
+    const d=await WalkAPI.getFlats();
+    if(!d || !okFloors(d.floors)) return;
+    try{ localStorage.setItem(CKEY, JSON.stringify(d)); }catch(e){}
+    if(d.floors.min!==FL.min || d.floors.max!==FL.max){ FL={min:d.floors.min, max:d.floors.max}; render(); }
+  }catch(e){} // offline: keep the cached or fallback range
+}
 render();
+loadFloors();
 </script>
 </body>
 </html>

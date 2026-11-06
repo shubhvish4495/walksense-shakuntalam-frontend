@@ -159,7 +159,7 @@ details summary{cursor:pointer}
       sayWalk:(n, m) => `सीधे चलें · लगभग ${n} कदम (~${m} मी)`, sayTurn:d => `${d} मुड़ें`,
       sayLift:f => `लिफ़्ट से ${f} पर जाएँ`, sayLiftG:'लिफ़्ट पर पीछे मुड़ें', sayEnd:c => `फ़्लैट ${c}`,
       total:(n, k) => `कुल ${n} कदम · ${k} मोड़`,
-      ground:'भूतल (ग्राउंड फ़्लोर)', ord:n => n+'वीं मंज़िल'}
+      ground:'भूतल (ग्राउंड फ़्लोर)', ord:n=>({1:'पहली',2:'दूसरी',3:'तीसरी',4:'चौथी',6:'छठी'}[n]||n+'वीं')+' मंज़िल'}
   };
   const t = () => S[lang];
 
@@ -220,7 +220,7 @@ details summary{cursor:pointer}
     if (+doc.stride >= 0.3 && +doc.stride <= 1.4) stride = +doc.stride;
     const gate = okRoute(doc.gate), flat = okRoute((doc.flats || {})[want.letter]);
     err = !gate.length ? 'errGate' : !flat.length ? 'errMissing'
-      : doc.floors && want.floor > doc.floors.max ? 'errFloor' : null;
+      : doc.floors && (want.floor > doc.floors.max || want.floor < doc.floors.min) ? 'errFloor' : null;
     if (err) { state = 'error'; return; }
     plan = [...gate, {t:'lift', floor:want.floor}, ...flat, {t:'end'}];
     state = 'ready'; ri = 0; lastHtml = '';

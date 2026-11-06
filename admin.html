@@ -121,6 +121,8 @@
           <input type="url" id="apiIn" placeholder="https://api.example.com" autocomplete="off" spellcheck="false">
           <div class="row" style="grid-template-columns:1fr 1fr"><button id="apiSave">Connect</button><button id="apiReset">Use default</button></div>
           <div class="kv" style="margin-top:14px"><span>Recorder stride (m)</span><span><input type="number" id="strideIn" min="0.3" max="1.4" step="0.05"> <button id="strideSave" style="padding:7px 10px">Save</button></span></div>
+          <div class="kv"><span>Floors with flats</span><span><input type="number" id="floorMin" min="1" max="200" step="1" style="width:60px" aria-label="Lowest floor"> to <input type="number" id="floorMax" min="1" max="200" step="1" style="width:60px" aria-label="Highest floor"> <button id="floorsSave" style="padding:7px 10px">Save</button></span></div>
+          <p class="small" style="margin-top:8px">The floors delivery agents can pick on the flat page.</p>
           <p class="small" style="margin-top:8px">Stride of the person who records the routes. Agents' step counts are scaled from it, so all segments should be walked by someone with about this stride.</p>
           <div class="row" style="grid-template-columns:1fr 1fr"><button id="exportBtn">Export backup</button><label class="btn" for="importFile">Restore backup</label></div>
           <input type="file" id="importFile" accept=".json,application/json" hidden>
@@ -373,6 +375,7 @@
       return `<a class="seg${s === 'gate' ? ' gate' : ''}" href="#/${s}"><span class="code">${s === 'gate' ? 'G' : s}</span><span class="grow"><b>${segName(s)}</b><small>${sub}</small></span>${badge}</a>`;
     }).join('');
     if (doc && document.activeElement !== $('strideIn')) $('strideIn').value = doc.stride;
+    if (doc && doc.floors && ![$('floorMin'), $('floorMax')].includes(document.activeElement)) { $('floorMin').value = doc.floors.min; $('floorMax').value = doc.floors.max; }
     if (document.activeElement !== $('apiIn')) $('apiIn').value = API.base();
   }
   function renderSeg(keepList) {
@@ -449,6 +452,14 @@
   $('reloadBtn').addEventListener('click', load);
   $('apiSave').addEventListener('click', () => { API.setBase($('apiIn').value); load(); });
   $('apiReset').addEventListener('click', () => { API.setBase(''); $('apiIn').value = API.base(); load(); });
+  $('floorsSave').addEventListener('click', async () => {
+    const min = +$('floorMin').value, max = +$('floorMax').value;
+    if (!doc || !online) { msg('Connect to the server first.', true); return; }
+    if (!(Number.isInteger(min) && Number.isInteger(max) && min >= 1 && max >= min && max <= 200)) { msg('Floors must be whole numbers with 1 ≤ lowest ≤ highest ≤ 200.', true); return; }
+    if (doc.floors && min === doc.floors.min && max === doc.floors.max) return;
+    try { gotDoc(await API.putFlats({...doc, floors:{min, max}})); msg(`Floors saved: ${min} to ${max}.`); } catch (err) { msg(`Not saved: ${err.message}`, true); }
+    render();
+  });
   $('strideSave').addEventListener('click', async () => {
     const v = +$('strideIn').value;
     if (!doc || !online) { msg('Connect to the server first.', true); return; }
