@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="hi">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -84,8 +84,8 @@ select:focus-visible,button:focus-visible{outline:3px solid var(--accent);outlin
   <div class="top">
     <div class="brand"><span id="brand"></span><small id="brandSub"></small></div>
     <div class="lang" role="group" aria-label="Language / भाषा">
-      <button type="button" data-lang="en" aria-pressed="true">EN</button>
-      <button type="button" data-lang="hi" aria-pressed="false">हिं</button>
+      <button type="button" data-lang="en" aria-pressed="false">EN</button>
+      <button type="button" data-lang="hi" aria-pressed="true">हिं</button>
     </div>
   </div>
 
@@ -133,7 +133,7 @@ const CKEY = "walksenseAgentCache";
 const okFloors = f => !!f && Number.isInteger(f.min) && Number.isInteger(f.max) && f.min >= 1 && f.max >= f.min && f.max <= 200;
 let FL = {min:1, max:9};
 try{ const d=JSON.parse(localStorage.getItem(CKEY)||"null"); if(d && okFloors(d.floors)) FL={min:d.floors.min, max:d.floors.max}; }catch(e){}
-let lang = "en";
+let lang = "hi";
 try{ const s=localStorage.getItem("lang"); if(s==="hi"||s==="en") lang=s; }catch(e){}
 const $ = id => document.getElementById(id);
 const floorEl=$("floor"), flatEl=$("flat");

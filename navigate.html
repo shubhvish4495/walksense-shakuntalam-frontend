@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="hi">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -68,8 +68,8 @@ details summary{cursor:pointer}
   <div class="top">
     <div class="brand"><span id="title"></span><a href="appartment.html" id="change"></a></div>
     <div class="lang" role="group" aria-label="Language / भाषा">
-      <button type="button" data-lang="en" aria-pressed="true">EN</button>
-      <button type="button" data-lang="hi" aria-pressed="false">हिं</button>
+      <button type="button" data-lang="en" aria-pressed="false">EN</button>
+      <button type="button" data-lang="hi" aria-pressed="true">हिं</button>
     </div>
   </div>
 
@@ -103,7 +103,7 @@ details summary{cursor:pointer}
   // Same thresholds and storage keys as lab.html, so tuning done there applies here.
   const T = {...WalkSensors.DEF};
   try { const s = JSON.parse(localStorage.getItem('walksenseTune') || '{}') || {}; for (const k in T) if (s[k] != null && Number.isFinite(+s[k])) T[k] = +s[k]; } catch (_) {}
-  let lang = 'en', cues = true, voice = false;
+  let lang = 'hi', cues = true, voice = false;
   try {
     const s = localStorage.getItem('lang'); if (s === 'hi' || s === 'en') lang = s;
     cues = localStorage.getItem('walksenseCues') !== '0'; voice = localStorage.getItem('walksenseVoice') === '1';
