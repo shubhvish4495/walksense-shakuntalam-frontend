@@ -72,6 +72,10 @@
   button.danger { color:var(--accent); border-color:var(--accent); }
   input[type=number], input[type=url] { font:500 14px var(--mono); background:var(--paper); color:var(--ink); border:1px solid var(--rule); padding:7px; }
   input[type=number] { width:84px; }
+  select { font:500 14px var(--mono); background:var(--paper); color:var(--ink); border:1px solid var(--ink); border-radius:2px; padding:10px 8px; width:100%; }
+  .from { margin-top:14px; padding:12px 14px; background:var(--card); border:1px solid var(--rule); }
+  .from .row { margin-top:8px; }
+  .it.base { opacity:.45; }
   input[type=url] { width:100%; }
   .sec { margin-top:26px; border-top:2px solid var(--ink); }
   details { border-bottom:1px solid var(--rule); }
@@ -139,6 +143,11 @@
       <div class="state"><div class="lbl">Status</div><span id="recState">Idle</span><div id="turnState" class="lbl" style="margin-top:4px">&nbsp;</div></div>
     </section>
 
+    <div class="from" id="fromRow">
+      <p class="small" style="margin:0">Is this flat near one that is already saved? Start from that flat’s door instead of the lift. Its saved route is copied in, and your walk to this flat is added after it.</p>
+      <div class="row" style="grid-template-columns:1fr 1fr"><select id="fromSel" aria-label="Start from flat"></select><button id="fromBtn">Record from there</button></div>
+    </div>
+
     <div class="row">
       <button id="mStep">+ Step</button><button id="mLeft">+ Left</button><button id="mRight">+ Right</button><button id="mUndo">Undo turn</button>
     </div>
@@ -175,6 +184,9 @@
   const DKEY = 'walksenseAdminDrafts', CKEY = 'walksenseAdminCache';
   let doc = null, online = false, busy = false;
   let cur = null, ed = [], recording = false, recSteps = 0;
+  // When recording from another flat's door, ed starts with that flat's route: the first
+  // recBase items are copied in, and only what comes after them is being recorded now.
+  let recBase = 0, recFrom = null;
   // Unsaved edits per segment, in wire format, so a reload or a dropped connection loses nothing.
   let drafts = {};
   try { drafts = JSON.parse(localStorage.getItem(DKEY) || '{}') || {}; } catch (_) {}
@@ -262,22 +274,26 @@
   }
   function undoTurn() {
     if (!recording) return;
-    let i = -1; ed.forEach((x, k) => { if (x.t === 't') i = k; });
+    let i = -1; ed.forEach((x, k) => { if (x.t === 't' && k >= recBase) i = k; });
     if (i < 1) { log('No turns to undo.'); return; }
     const d = ed[i].d;
-    // A recording always starts with a walk, so the turn sits between two walks.
+    // A recording always starts with a walk (a copied route always ends with one),
+    // so the turn sits between two walks.
     ed.splice(i-1, 3, {t:'s', n:ed[i-1].n + ed[i+1].n});
     sensors.resetTurn(); syncDraft();
     log(`Removed ${word(d)} turn`); renderSeg();
   }
-  async function startRec() {
+  // from: another flat letter to start at that flat's door, or null to start at the lift.
+  async function startRec(from) {
     if (recording || !cur) return;
-    if (clean(ed).length && !confirm(`Replace the current ${segName(cur)} route (${stats(ed)}) with a new recording?`)) return;
+    const base = from ? clean(serverRoute(from)) : [];
+    if (from && !base.length) { msg(`Flat ${from} has no saved route to start from.`, true); return; }
+    if (clean(ed).length && !confirm(`Replace the current ${segName(cur)} route (${stats(ed)}) with a new recording${from ? ` that starts from flat ${from}` : ''}?`)) return;
     try {
       await sensors.start();
-      ed = [{t:'s', n:0}]; recSteps = 0; recording = true; syncDraft();
-      log('Recording started. Walk normally with the phone in your hand.');
-      msg(`Recording ${segName(cur)}. Tap Stop at the end.`);
+      ed = [...base, {t:'s', n:0}]; recBase = base.length; recFrom = from || null; recSteps = 0; recording = true; syncDraft();
+      log(from ? `Recording started from flat ${from}'s door (${stats(base)} copied in).` : 'Recording started. Walk normally with the phone in your hand.');
+      msg(from ? `Recording ${segName(cur)} from flat ${from}. Stand at flat ${from}'s door facing the way you walked up to it, then walk to flat ${cur}. A turn made while standing still may be missed, so add it with + Left / + Right. Tap Stop at flat ${cur}'s door.` : `Recording ${segName(cur)}. Tap Stop at the end.`);
     } catch (err) { msg(`Could not start: ${err.message}`, true); }
     render();
   }
@@ -285,7 +301,8 @@
     if (!recording) return;
     sensors.stop(); // flushes buffered steps into ed, so it runs before recording = false
     recording = false; ed = clean(ed); syncDraft();
-    log(`Recording stopped (${stats(ed)}).`);
+    log(`Recording stopped (${stats(ed)}${recFrom ? `, including flat ${recFrom}'s route` : ''}).`);
+    recBase = 0; recFrom = null;
     msg(ed.length ? `Recorded ${stats(ed)}. Check it, then tap Save.` : 'Nothing was recorded.', !ed.length);
     render();
   }
@@ -374,7 +391,13 @@
     $('recState').textContent = recording ? (sensors.walking ? 'Recording · walking' : 'Recording') : busy ? 'Saving…' : d ? 'Unsaved changes' : 'Idle';
     $('routeStats').textContent = stats(ed);
     ['mStep', 'mLeft', 'mRight'].forEach(id => { $(id).disabled = !recording; });
-    $('mUndo').disabled = !(recording && ed.some(x => x.t === 't'));
+    $('mUndo').disabled = !(recording && ed.some((x, k) => x.t === 't' && k >= recBase));
+    // Start-from-another-flat: only for flat legs, and only flats with a saved route.
+    const others = s === 'gate' ? [] : LETTERS.filter(l => l !== s && recorded(l));
+    $('fromRow').hidden = recording || !others.length;
+    const fs = $('fromSel'), keep = fs.value, opts = others.map(l => `<option value="${l}">From flat ${l}</option>`).join('');
+    if (fs.dataset.opts !== opts) { fs.innerHTML = opts; fs.dataset.opts = opts; fs.value = others.includes(keep) ? keep : others[0] || ''; }
+    $('fromBtn').disabled = recording || busy;
     $('addRow').hidden = $('editHint').hidden = recording;
     $('discardBtn').disabled = recording || busy || !d;
     $('deleteBtn').disabled = recording || busy || !onServer.length || !online;
@@ -384,7 +407,7 @@
     $('saveBtn').textContent = busy ? 'Saving…' : 'Save';
     const list = $('routeList');
     if (recording) {
-      list.innerHTML = ed.map((x, i) => `<div class="it${i === ed.length-1 ? ' cur' : ''}"><span class="ii">${ICON[x.t === 's' ? 's' : x.d]}</span><span class="grow">${x.t === 's' ? `Walk ${x.n} steps` : `Turn ${word(x.d)}`}</span></div>`).join('');
+      list.innerHTML = ed.map((x, i) => `<div class="it${i === ed.length-1 ? ' cur' : ''}${i < recBase ? ' base' : ''}"><span class="ii">${ICON[x.t === 's' ? 's' : x.d]}</span><span class="grow">${x.t === 's' ? `Walk ${x.n} steps` : `Turn ${word(x.d)}`}</span></div>`).join('');
       list.scrollTop = list.scrollHeight;
     } else if (!keepList) {
       list.innerHTML = ed.map((x, i) => `<div class="it" data-i="${i}"><button class="ii" data-act="kind" aria-label="Change type">${ICON[x.t === 's' ? 's' : x.d]}</button>`
@@ -413,7 +436,8 @@
 
   // ---- controls ----
   $('backBtn').addEventListener('click', () => { location.hash = '#/'; });
-  $('recBtn').addEventListener('click', startRec);
+  $('recBtn').addEventListener('click', () => startRec(null));
+  $('fromBtn').addEventListener('click', () => { if ($('fromSel').value) startRec($('fromSel').value); });
   $('stopBtn').addEventListener('click', stopRec);
   $('saveBtn').addEventListener('click', saveSeg);
   $('discardBtn').addEventListener('click', discard);
