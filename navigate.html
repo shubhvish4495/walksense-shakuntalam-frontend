@@ -248,14 +248,30 @@ details summary{cursor:pointer}
     // running so overshoot past the estimate is part of the calibration sample (F-1).
     if (x.t !== 't') legSteps = 0;
     overshoot = 0;
+    armShortTurn();
     render();
   }
-  function calibrate(j) {
+  // A turn that comes right after the lift or the gate, or after only a few steps, is often made
+  // standing still: no steps for the step-based detectors to work with. The walker is facing a
+  // known way at the start of that stretch (back to the lift door, or into the gate), so measure
+  // the turn from that heading instead. The reference is taken when the short stretch begins.
+  const SHORT = 4;
+  function armShortTurn() {
+    const x = plan[ri], prev = plan[ri-1], nx = plan[ri+1];
+    const startsHere = !prev || prev.t === 'lift';
+    if (x.t === 's' && x.n <= SHORT && nx && nx.t === 't') sensors.armTurn(nx.d);
+    else if (x.t === 't' && (startsHere || (prev.t === 's' && prev.n <= SHORT))) {
+      // After a short walk the reference from its start is kept; only arm fresh at a starting point.
+      if (startsHere || !sensors.armed) sensors.armTurn(x.d);
+    } else sensors.disarmTurn();
+  }
+  function calibrate(j, after) {
     const expected = plan[j-1] && plan[j-1].t === 's' ? plan[j-1].n : 0;
-    if (expected < 8 || legSteps < 1) return;
-    const r = clamp(legSteps/expected, 0.6, 1.6);
+    const walked = legSteps - after;
+    if (expected < 8 || walked < 1) return;
+    const r = clamp(walked/expected, 0.6, 1.6);
     legRatio = legRatio*0.6 + r*0.4; calibN++;
-    log(`Calibrated: walked ${legSteps} steps where ${expected} were recorded · pace factor ${legRatio.toFixed(2)}`);
+    log(`Calibrated: walked ${walked} steps where ${expected} were recorded · pace factor ${legRatio.toFixed(2)}`);
   }
   function onStep() {
     if (!active) return;
@@ -266,9 +282,19 @@ details summary{cursor:pointer}
     rem--;
     if (rem <= 0) setIdx(ri+1); else render();
   }
-  function onTurn(d, manual, deg) {
+  // Steps already walked past a turn (it was detected late, or confirmed by hand after walking on)
+  // belong to the stretch after it. Leave at least one step so the stretch is not skipped.
+  function credit(after) {
+    if (!after || plan[ri].t !== 's') return;
+    const n = Math.min(after, rem-1);
+    if (n <= 0) return;
+    rem -= n; legSteps = n;
+    log(`${n} step${n > 1 ? 's' : ''} walked since the turn counted toward this stretch.`);
+    render();
+  }
+  function onTurn(d, manual, deg, after = 0) {
     if (!active) return;
-    log(`${manual ? 'Manual' : 'Detected'} ${d === 'L' ? 'left' : 'right'} turn${deg ? ` (~${deg}°)` : ''}`);
+    log(`${manual ? 'Manual' : 'Detected'} ${d === 'L' ? 'left' : 'right'} turn${deg ? ` (~${deg}°)` : ''}${after ? `, ${after} steps ago` : ''}`);
     const x = plan[ri]; let j = -1;
     if (x.t === 't') j = ri;
     else if (x.t === 's' && plan[ri+1] && plan[ri+1].t === 't') {
@@ -281,14 +307,17 @@ details summary{cursor:pointer}
     }
     if (j < 0) { log('Turn not expected here, ignored.'); return; }
     if (plan[j].d !== d) { log(`Expected a ${plan[j].d === 'L' ? 'left' : 'right'} turn. Tap Done to skip it.`); return; }
-    if (!manual) calibrate(j);
-    setIdx(j+1);
+    if (!manual) calibrate(j, after);
+    setIdx(j+1); credit(after);
   }
   const sensors = WalkSensors.create({
     // Two candidates are enough to believe a walker following directions (as in lab retrace).
     warmup: 2,
+    headingTurns: true,
+    // A rotation made after stopping only counts once the walker steps off in that direction.
+    confirmStill: true,
     onStep,
-    onTurn: (d, deg) => onTurn(d, false, deg),
+    onTurn: (d, deg, after) => onTurn(d, false, deg, after),
     onTurning: deg => { $('turning').textContent = deg == null ? '' : `↻ ${deg}°`; },
     onIgnored: log,
   });
@@ -394,6 +423,15 @@ details summary{cursor:pointer}
     if (x.t === 'end') { arrive(); return; }
     // Turning around in the lift must not carry over as a half-tracked turn.
     if (x.t === 'lift') sensors.resetTurn();
+    if (x.t === 't') {
+      // The turn was probably made, too gradually to be detected, a few steps back.
+      // Find it in the heading history so those steps count toward the next stretch.
+      const f = sensors.findTurn(x.d);
+      sensors.markTurn();
+      log(f ? `Marked done. Heading shows a ~${f.deg}° turn ${f.after} steps ago.` : 'Marked done manually.');
+      setIdx(ri+1); if (f) credit(f.after);
+      return;
+    }
     log(x.t === 'lift' ? 'Out of the lift.' : 'Marked done manually.');
     setIdx(ri+1);
   });
