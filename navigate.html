@@ -39,7 +39,8 @@ body{margin:0;min-height:100vh;color:var(--ink);font-family:"Hind","Noto Sans De
 .nbar{height:6px;background:var(--line)} .nfill{height:100%;width:0;background:#f2b705;transition:width .15s}
 .then{padding:10px 18px;border-bottom:1px solid var(--line);font-weight:600;font-size:.95rem}
 .turning{padding:4px 18px 0;font-size:.8rem;color:var(--muted);min-height:1.4em}
-.list{max-height:260px;overflow:auto;position:relative}
+/* Shows at most 3 instructions; renderNav sizes it to the current one and the next two. */
+.list{max-height:150px;overflow:auto;position:relative}
 .it{display:flex;gap:12px;align-items:center;padding:10px 18px;border-bottom:1px solid var(--line);font-size:.95rem}
 .it.cur{background:var(--hi);font-weight:600} .it.done{opacity:.4}
 .it.lift{background:var(--soft)} .it.lift.cur{background:var(--hi)}
@@ -76,11 +77,11 @@ details summary{cursor:pointer}
   <div class="msg" id="msg" hidden></div>
 
   <section class="card" id="nav" hidden>
+    <div class="btns" id="nBtns" hidden><button class="b" id="prevBtn"></button><button class="b main" id="nextBtn"></button></div>
     <div class="navmain" aria-live="polite"><div class="nicon" id="nIcon">↑</div><div><div class="ntxt" id="nTxt"></div><div class="nsub" id="nSub"></div></div></div>
     <div class="nbar"><div class="nfill" id="nFill"></div></div>
     <div class="turning" id="turning"></div>
     <div class="then" id="nThen" hidden></div>
-    <div class="btns" id="nBtns" hidden><button class="b" id="prevBtn"></button><button class="b main" id="nextBtn"></button></div>
     <div class="list" id="nList"></div>
     <div class="total" id="total"></div>
   </section>
@@ -386,7 +387,12 @@ details summary{cursor:pointer}
     }).join('');
     if (html !== lastHtml) {
       lastHtml = html; const l = $('nList'); l.innerHTML = html;
-      const c = l.querySelector('.cur'); l.scrollTop = c ? Math.max(0, c.offsetTop - 8) : 0;
+      const its = [...l.children], k = Math.max(0, its.findIndex(e => e.classList.contains('cur')));
+      if (its.length) {
+        const last = its[Math.min(k+2, its.length-1)];
+        l.style.maxHeight = `${last.offsetTop + last.offsetHeight - its[k].offsetTop}px`;
+        l.scrollTop = its[k].offsetTop;
+      }
     }
     const walks = plan.filter(y => y.t === 's');
     $('total').textContent = s.total(walks.reduce((n, y) => n + y.n, 0), plan.filter(y => y.t === 't').length);
